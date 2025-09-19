@@ -1,6 +1,6 @@
 function CreateJCIDS() {
   const {token, baseUrl} = authenticate() // from Authenticate.gs
-  const data = getJsonFromSpreadsheet('Job Cost IDs')
+  const data = getSpreadSheetData('Job Cost IDs')
 
     // Check if no data and quit
   if (!data || data.length === 0) {

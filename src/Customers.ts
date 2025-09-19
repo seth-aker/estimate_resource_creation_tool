@@ -1,7 +1,7 @@
 function CreateCustomers() {
 
   const {token, baseUrl} = authenticate()
-  const customerData = getJsonFromSpreadsheet('Customers')
+  const customerData = getSpreadSheetData('Customers')
 
     // Check if no data and quit
   if (!customerData || customerData.length === 0) {

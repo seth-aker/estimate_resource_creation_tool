@@ -22,8 +22,6 @@
   },
   "include": [
     "src/**/*.ts",
-    "types/**/*.d.ts",
-    "eslint.config.mts"
   ],
   "exclude": [
     "node_modules",

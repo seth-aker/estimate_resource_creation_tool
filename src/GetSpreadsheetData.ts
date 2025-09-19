@@ -1,6 +1,6 @@
-type Row = { [key: string]: any }
-
-function getJsonFromSpreadsheet(spreadsheetName: string) {
+type Row = { [key: string]: SpreadsheetValues}
+type SpreadsheetValues = Number | Boolean | Date | String
+function getSpreadSheetData(spreadsheetName: string) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(spreadsheetName);
   if(!sheet) throw new Error(`An error occured getting "${spreadsheetName}"`)
   const dataRange = sheet.getDataRange(); // Get data
@@ -13,7 +13,12 @@ function getJsonFromSpreadsheet(spreadsheetName: string) {
   for(let i = 1; i < data.length; i++) {
     const row: Row = {};
     for(let j = 0; j < headers.length; j++) {
-      row[headers[j]] = data[i][j];
+      const value = data[i][j];
+      // Trim whitespace if the value is a string
+      if(typeof value === 'string') {
+        value.trim()
+      }
+      row[headers[j]] = value;
     }
     jsonData.push(row);
   }
