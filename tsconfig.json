@@ -1,34 +1,32 @@
 {
   "compilerOptions": {
-    /* Base Options */
-    "target": "ES2020", // Specifies which ECMAScript version to compile to. ES2020 is well-supported by the V8 runtime.
-    "lib": ["ES2020"], // Includes the standard library declarations for the specified ECMAScript version.
+   
+    "target": "ES2020", 
+    "lib": ["ES2020"],
 
-    /* Module Resolution */
-    "moduleResolution": "node", // How TypeScript looks up files from 'import' statements. 'node' is standard.
-    "allowSyntheticDefaultImports": true, // Allows default imports from modules with no default export.
+    "moduleResolution": "node", 
+    "allowSyntheticDefaultImports": true, 
+    "outDir": "./dist", 
     
-    /* Project Structure */
-    "rootDir": "./src", // The root directory of your source TypeScript files.
-    "outDir": "./dist", // The output directory for the compiled JavaScript files. 'clasp' should push from here.
-
-    /* Strict Type-Checking */
-    "strict": true, // Enables all strict type-checking options. Highly recommended for catching errors.
-    "noImplicitAny": true, // Raises an error on expressions and declarations with an implied 'any' type.
+    "strict": true, 
+    "noImplicitAny": true, 
     
-    /* Additional Checks */
-    "noUnusedLocals": true, // Reports errors on unused local variables.
-    "noUnusedParameters": true, // Reports errors on unused parameters.
-    "noImplicitReturns": true, // Reports an error when not all code paths in a function return a value.
-    "noFallthroughCasesInSwitch": true, // Reports errors for fallthrough cases in switch statements.
+    "noUnusedLocals": true, 
+    "noUnusedParameters": true, 
+    "noImplicitReturns": true, 
+    "noFallthroughCasesInSwitch": true,
     
-    /* Source Map Options */
-    "sourceMap": true, // Generates corresponding '.map' files for easier debugging.
+    
+    "sourceMap": true,
+    "typeRoots": ["./node_modules/@types", "./types"]
   },
   "include": [
-    "src/**/*.ts" // Specifies which files TypeScript should compile.
+    "src/**/*.ts",
+    "types/**/*.d.ts",
+    "eslint.config.mts"
   ],
   "exclude": [
-    "node_modules" // Specifies which files to exclude from compilation.
+    "node_modules",
+    "dist"
   ]
 }
