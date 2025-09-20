@@ -1,3 +1,7 @@
+type TWorkType = {
+  "Work Type": string,
+  "Work Subtype": string
+}
 interface ICategoryItem {
   AntiTamperToken: string,
   EstimateREF: string,
@@ -10,7 +14,7 @@ interface ICategoryGetResponse {
 }
 function CreateWorkTypes() {
   const {token, baseUrl} = authenticate()
-  const workTypesData = getSpreadSheetData("Work Types")
+  const workTypesData = getSpreadSheetData<TWorkType>("Work Types")
 
   if(!workTypesData || workTypesData.length === 0) {
     Logger.log("No data to send!");
@@ -20,7 +24,7 @@ function CreateWorkTypes() {
   _createWorkTypes(workTypesData, token, baseUrl);
 }
 
-function _createWorkTypes(workTypesData: Row[], token: string, baseUrl: string) {
+function _createWorkTypes(workTypesData: TWorkType[], token: string, baseUrl: string) {
   const headers = {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'
@@ -73,7 +77,7 @@ function _createWorkTypes(workTypesData: Row[], token: string, baseUrl: string) 
   } 
 }
 
-function _getUniqueWorkTypes(rows: Row[]) {
+function _getUniqueWorkTypes(rows: TWorkType[]) {
   const workTypes = new Set<string>()
   rows.forEach((row) => {
     const workTypeName = row['Work Type'] as string
@@ -82,13 +86,13 @@ function _getUniqueWorkTypes(rows: Row[]) {
   return workTypes
 }
 
-function _createWorkSubtypes(workTypesData: Row[], workType: ICategoryItem, token: string, baseUrl: string ) {
+function _createWorkSubtypes(workTypesData: TWorkType[], workType: ICategoryItem, token: string, baseUrl: string ) {
   const workTypeName = workType.Name
   const workTypeId = workType.ObjectID
   const workSubTypes = workTypesData
     .filter((row) => {
       // Include only worktypes in the table that match the parent and have a subtype that exists
-      return row["Work Type"] === workTypeName && (row["Work Subtype"] !== "" && row["Work SubType"] !== undefined)
+      return row["Work Type"] === workTypeName && (row["Work Subtype"] !== "" && row["Work Subtype"] !== undefined)
     })
     .map((row) => {
       return {

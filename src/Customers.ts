@@ -1,7 +1,20 @@
+type TCustomer = {
+    Name: string, 
+    Address1?: string,
+    Address2?: string,
+    City: string,
+    State?: string,
+    Zip?: number,
+    Phone?: string,
+    Fax?: string,
+    "Subcontractor Category"?: string,
+    JobCostID?: string,
+    // TODO: Fill this with the rest of the rows
+}
 function CreateCustomers() {
 
   const {token, baseUrl} = authenticate()
-  const customerData = getSpreadSheetData('Customers')
+  const customerData = getSpreadSheetData<TCustomer>('Customers')
 
     // Check if no data and quit
   if (!customerData || customerData.length === 0) {

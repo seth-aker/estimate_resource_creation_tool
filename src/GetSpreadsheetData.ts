@@ -1,19 +1,19 @@
-type Row = { [key: string]: SpreadsheetValues}
-type SpreadsheetValues = Number | Boolean | Date | String
-function getSpreadSheetData(spreadsheetName: string) {
+type ISpreadsheetValues = Number | Boolean | Date | String
+
+function getSpreadSheetData<T>(spreadsheetName: string): T[] {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(spreadsheetName);
   if(!sheet) throw new Error(`An error occured getting "${spreadsheetName}"`)
   const dataRange = sheet.getDataRange(); // Get data
   const data = dataRange.getValues(); // create 2D array
   
   // Process data (e.g., converting to JSON format for API)
-  const headers: string[] = data[0]; 
-  const jsonData: Row[] = [];
+  const headers = data[0]; 
+  const jsonData = [];
 
   for(let i = 1; i < data.length; i++) {
-    const row: Row = {};
+    const row: Record<string, ISpreadsheetValues> = {}
     for(let j = 0; j < headers.length; j++) {
-      const value = data[i][j];
+      const value = data[i][j] as ISpreadsheetValues;
       // Trim whitespace if the value is a string
       if(typeof value === 'string') {
         value.trim()
@@ -23,5 +23,5 @@ function getSpreadSheetData(spreadsheetName: string) {
     jsonData.push(row);
   }
   Logger.log(JSON.stringify(jsonData, null, 2))
-  return jsonData;
+  return jsonData as T[];
 }
