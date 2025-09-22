@@ -12,6 +12,11 @@ interface TSubcontractorRow {
     "Work Types": string,
     // TODO: Fill this with the rest of the rows
 }
+interface ISubconWorkTypePayload {
+    OrganizationREF: string,
+    WorkTypeCategoryREF?: string
+    WorkSubtypeCategoryREF?: string,
+}
 function CreateSubcontractors() {
     const {token, baseUrl} = authenticate()
     const subcontractorData = getSpreadSheetData<TSubcontractorRow>('Subcontractors');
@@ -40,11 +45,11 @@ function _createSubcontractors(subcontractorData: TSubcontractorRow[], token: st
     subcontractorData.forEach((row, index) => {
         // Pull out the columns that shouldn't be sent when creating a subcontractor. These will be sent later
         const {['Subcontractor Category']: subcontractorCategory, ['Work Types']: workTypes, ...restOfRow} = row
-        const url = baseUrl + 'TODO: SET THIS CORRECTLY'
+        const url = baseUrl + '/Resource/Organization/Subcontractor'
         const subcontractorCategories: ICategoryItem[] = existingSubcontractorCategories.concat(createdCategories)
         const payload = {
             ...restOfRow, 
-            categoryREF: subcontractorCategories.find((each) => each.Name === subcontractorCategory)?.ObjectID
+            Category: subcontractorCategories.find((each) => each.Name === subcontractorCategory)?.Name
         }
         const options = {
             method: 'post' as const,
@@ -68,6 +73,10 @@ function _createSubcontractors(subcontractorData: TSubcontractorRow[], token: st
         }
     })
     if(failedRows.length > 0) {
+        const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet()
+        failedRows.forEach((row) => {
+            sheet.getRange(row, 1,1, sheet.getLastColumn()).setBackground('yellow')
+        })
         SpreadsheetApp.getUi().alert(`Some rows failed to be created. Failed Rows: ${failedRows.join(', ')}`)
     } else {
         SpreadsheetApp.getUi().alert("All subcontractors successfully created.")
@@ -137,37 +146,53 @@ function _createSubcontractorCategories(categories: string[], token: string, bas
 }
 
 function _addSubcontractorWorkTypes(workTypeNames: string[], subcontractorREF: string, token: string, baseUrl: string) {
-    const url = baseUrl + `TODO: connect to the correct endpoint.`
+    let url = baseUrl
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
     }
-    const {worktypes, workSubtypes} = _getWorkTypeObjectIDs(token, baseUrl)
-
-    workTypeNames.forEach((name) => {
-        let workTypeID = worktypes.find((worktype) => worktype.Name === name)?.ObjectID
-        if(!workTypeID) {
-           workTypeID = workSubtypes.find((subtypes) => subtypes.Name === name)?.ObjectID 
+    const {workTypes, workSubtypes} = _getWorkTypes(token, baseUrl)
+    // Prepare to send the requests.
+    const batchOptions: GoogleAppsScript.URL_Fetch.URLFetchRequest[] = []
+    workTypeNames.forEach((workTypeName) => {
+        const payload: ISubconWorkTypePayload = {
+            OrganizationREF: subcontractorREF,
         }
-        const payload = {
-            EstimateREF: gESTIMATE_REF,
-            SubcontractorID: subcontractorREF,
-            WorktypeID: workTypeID
+        const workType = workTypes.find((each) => each.Name === workTypeName)
+        url = baseUrl + '/Resource/Organization/OrganizationWorkType'
+        payload.WorkTypeCategoryREF = workType?.ObjectID
+        if(!workType) {
+            // If worktype can't be found post to work subtype, we can assume that this exists at this point.
+            url = baseUrl + '/Resource/Organization/OrganizationWorkSubtype'
+            const workSubType = workSubtypes.find((each) => each.Name === workTypeName)
+            payload.WorkSubtypeCategoryREF = workSubType?.ObjectID
+            delete payload.WorkTypeCategoryREF // Remove this reference just in case.
         }
-        const options = {
+        batchOptions.push({
+            url,
             method: 'post' as const,
             headers,
             payload: JSON.stringify(payload)
-        }
-        const response = UrlFetchApp.fetch(url, options)
-        const responseCode = response.getResponseCode()
-        if(responseCode !== 201) {
-            throw new Error(`An error occured creating the worktype ${name} for the subcontractor with ref ${subcontractorREF}`)
-        }
+        })
     })
+    try {
+        const responses = UrlFetchApp.fetchAll(batchOptions)
+        const errors = responses.filter((res) => res.getResponseCode() >= 400) // Filter out all codes that are successes (200, 201)
+        if(errors.length > 0) {
+            throw new Error(`The following worktypes returned with an error: \n${errors.map((err) => {
+                // Responses returns in the same order as they are sent, so we can use the index of the responses object to match to the work type name.
+                const index = responses.findIndex((each) => each === err) 
+                // BatchOptions was created in the same order as workTypeNames obj, so we can assume this index references the correct worktype (or subtype)
+                return `{Work Type: ${workTypeNames[index]}, Error code: ${err.getResponseCode()}}\n`
+            })}`)
+        }
+    } catch (err) {
+        throw new Error(`An error occured adding subcontractor work types. Error: ${err}`)
+    }
+
 }
 
-function _getWorkTypeObjectIDs(token: string, baseUrl: string) {
+function _getWorkTypes(token: string, baseUrl: string) {
     const workTypeUrl = baseUrl + `/Resources/Category/Worktype?$filter=EstimateREF eq ${gESTIMATE_REF}`
     const subtypeUrl = baseUrl + `/Resources/Subcategory/WorkSubtype?$filter=EstimateREF eq ${gESTIMATE_REF}`
     const headers = {
@@ -187,7 +212,7 @@ function _getWorkTypeObjectIDs(token: string, baseUrl: string) {
     try {
         const responses = UrlFetchApp.fetchAll([workTypeOptions, subtypeOptions])
         const responseCodes = responses.map((eachResponse) => eachResponse.getResponseCode())
-        const worktypes: ICategoryItem[] = []
+        const workTypes: ICategoryItem[] = []
         const workSubtypes: ICategoryItem[] = []
         responseCodes.forEach((code) => {
             if(code !== 200) {
@@ -197,12 +222,12 @@ function _getWorkTypeObjectIDs(token: string, baseUrl: string) {
         const worktypeResponse: ICategoryGetResponse = JSON.parse(responses[0].getContentText())
         const subtypeResponse: ICategoryGetResponse = JSON.parse(responses[1].getContentText())
         worktypeResponse.Items.forEach((item) => {
-            worktypes.push(item)
+            workTypes.push(item)
         })
         subtypeResponse.Items.forEach((item) => {
             workSubtypes.push(item)
         })
-        return {worktypes, workSubtypes}
+        return {workTypes, workSubtypes}
         
          
     } catch (err) {
