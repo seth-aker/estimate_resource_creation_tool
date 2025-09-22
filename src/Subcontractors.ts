@@ -1,4 +1,4 @@
-type TSubcontractorRow = {
+interface TSubcontractorRow {
     Name: string, 
     Address1?: string,
     Address2?: string,
@@ -7,8 +7,9 @@ type TSubcontractorRow = {
     Zip?: number,
     Phone?: string,
     Fax?: string,
-    "Subcontractor Category"?: string,
     JobCostID?: string,
+    "Subcontractor Category"?: string,
+    "Work Types": string,
     // TODO: Fill this with the rest of the rows
 }
 function CreateSubcontractors() {
@@ -35,12 +36,15 @@ function _createSubcontractors(subcontractorData: TSubcontractorRow[], token: st
     if(failedCategories.length > 0) {
         throw new Error(`Script failed while creating the following subcontractor categories: ${failedCategories.join(', ')}`)
     }
+    const failedRows: number[] = [];
     subcontractorData.forEach((row, index) => {
+        // Pull out the columns that shouldn't be sent when creating a subcontractor. These will be sent later
+        const {['Subcontractor Category']: subcontractorCategory, ['Work Types']: workTypes, ...restOfRow} = row
         const url = baseUrl + 'TODO: SET THIS CORRECTLY'
         const subcontractorCategories: ICategoryItem[] = existingSubcontractorCategories.concat(createdCategories)
         const payload = {
-            ...row, 
-            categoryREF: subcontractorCategories.find((each) => each.Name === row['Subcontractor Category'])?.ObjectID
+            ...restOfRow, 
+            categoryREF: subcontractorCategories.find((each) => each.Name === subcontractorCategory)?.ObjectID
         }
         const options = {
             method: 'post' as const,
@@ -53,11 +57,21 @@ function _createSubcontractors(subcontractorData: TSubcontractorRow[], token: st
             if(responseCode !== 201) {
                 throw new Error(`An error occured creating subcontractor at line ${index + 2}. Code: ${responseCode}`)
             }
-            
+            const data: TSubcontractorRow & {ObjectID: string} = JSON.parse(response.getContentText()).Item 
+            // Data validation in google sheets allows multiple inputs, when the data is added, it is added with a , and space.
+            // Added whitespace trimming as well.
+            const workTypeArray = workTypes.split(', ').map((eachString) => eachString.trim())
+            _addSubcontractorWorkTypes(workTypeArray, data.ObjectID, token, baseUrl)
         } catch (err) {
-
+            Logger.log(err)
+            failedRows.push(index + 2)
         }
     })
+    if(failedRows.length > 0) {
+        SpreadsheetApp.getUi().alert(`Some rows failed to be created. Failed Rows: ${failedRows.join(', ')}`)
+    } else {
+        SpreadsheetApp.getUi().alert("All subcontractors successfully created.")
+    }
   
 
 }
@@ -120,4 +134,79 @@ function _createSubcontractorCategories(categories: string[], token: string, bas
         }
     })
     return { createdCategories, failedCategories }
+}
+
+function _addSubcontractorWorkTypes(workTypeNames: string[], subcontractorREF: string, token: string, baseUrl: string) {
+    const url = baseUrl + `TODO: connect to the correct endpoint.`
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    }
+    const {worktypes, workSubtypes} = _getWorkTypeObjectIDs(token, baseUrl)
+
+    workTypeNames.forEach((name) => {
+        let workTypeID = worktypes.find((worktype) => worktype.Name === name)?.ObjectID
+        if(!workTypeID) {
+           workTypeID = workSubtypes.find((subtypes) => subtypes.Name === name)?.ObjectID 
+        }
+        const payload = {
+            EstimateREF: gESTIMATE_REF,
+            SubcontractorID: subcontractorREF,
+            WorktypeID: workTypeID
+        }
+        const options = {
+            method: 'post' as const,
+            headers,
+            payload: JSON.stringify(payload)
+        }
+        const response = UrlFetchApp.fetch(url, options)
+        const responseCode = response.getResponseCode()
+        if(responseCode !== 201) {
+            throw new Error(`An error occured creating the worktype ${name} for the subcontractor with ref ${subcontractorREF}`)
+        }
+    })
+}
+
+function _getWorkTypeObjectIDs(token: string, baseUrl: string) {
+    const workTypeUrl = baseUrl + `/Resources/Category/Worktype?$filter=EstimateREF eq ${gESTIMATE_REF}`
+    const subtypeUrl = baseUrl + `/Resources/Subcategory/WorkSubtype?$filter=EstimateREF eq ${gESTIMATE_REF}`
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    }
+    const workTypeOptions = {
+        url: workTypeUrl,
+        method: 'get' as const,
+        headers
+    }
+    const subtypeOptions = {
+        url: subtypeUrl, 
+        method: 'get' as const,
+        headers
+    }
+    try {
+        const responses = UrlFetchApp.fetchAll([workTypeOptions, subtypeOptions])
+        const responseCodes = responses.map((eachResponse) => eachResponse.getResponseCode())
+        const worktypes: ICategoryItem[] = []
+        const workSubtypes: ICategoryItem[] = []
+        responseCodes.forEach((code) => {
+            if(code !== 200) {
+                throw new Error(`An error occured fetching worktypes object IDs`)
+            }
+        })
+        const worktypeResponse: ICategoryGetResponse = JSON.parse(responses[0].getContentText())
+        const subtypeResponse: ICategoryGetResponse = JSON.parse(responses[1].getContentText())
+        worktypeResponse.Items.forEach((item) => {
+            worktypes.push(item)
+        })
+        subtypeResponse.Items.forEach((item) => {
+            workSubtypes.push(item)
+        })
+        return {worktypes, workSubtypes}
+        
+         
+    } catch (err) {
+        Logger.log(err)
+        throw err
+    }
 }
