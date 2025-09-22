@@ -63,7 +63,7 @@ function _createSubcontractors(subcontractorData: TSubcontractorRow[], token: st
                 throw new Error(`An error occured creating subcontractor at line ${index + 2}. Code: ${responseCode}`)
             }
             const data: TSubcontractorRow & {ObjectID: string} = JSON.parse(response.getContentText()).Item 
-            // Data validation in google sheets allows multiple inputs, when the data is added, it is added with a , and space.
+            // Data validation in google sheets allows multiple inputs, when the data is added, it is added with a ',' and space.
             // Added whitespace trimming as well.
             const workTypeArray = workTypes.split(', ').map((eachString) => eachString.trim())
             _addSubcontractorWorkTypes(workTypeArray, data.ObjectID, token, baseUrl)
@@ -146,50 +146,76 @@ function _createSubcontractorCategories(categories: string[], token: string, bas
 }
 
 function _addSubcontractorWorkTypes(workTypeNames: string[], subcontractorREF: string, token: string, baseUrl: string) {
-    let url = baseUrl
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
     }
     const {workTypes, workSubtypes} = _getWorkTypes(token, baseUrl)
     // Prepare to send the requests.
-    const batchOptions: GoogleAppsScript.URL_Fetch.URLFetchRequest[] = []
+    const workTypeBatch: GoogleAppsScript.URL_Fetch.URLFetchRequest[] = []
+    const subtypeBatch: GoogleAppsScript.URL_Fetch.URLFetchRequest[] = []
+    // Create Work types Batch
     workTypeNames.forEach((workTypeName) => {
+        const workType = workTypes.find((each) => each.Name === workTypeName)
+        if(!workType) {
+            return
+        }
+        const url = baseUrl + '/Resource/Organization/OrganizationWorkType'
         const payload: ISubconWorkTypePayload = {
             OrganizationREF: subcontractorREF,
+            WorkTypeCategoryREF: workType.ObjectID
         }
-        const workType = workTypes.find((each) => each.Name === workTypeName)
-        url = baseUrl + '/Resource/Organization/OrganizationWorkType'
-        payload.WorkTypeCategoryREF = workType?.ObjectID
-        if(!workType) {
-            // If worktype can't be found post to work subtype, we can assume that this exists at this point.
-            url = baseUrl + '/Resource/Organization/OrganizationWorkSubtype'
-            const workSubType = workSubtypes.find((each) => each.Name === workTypeName)
-            payload.WorkSubtypeCategoryREF = workSubType?.ObjectID
-            delete payload.WorkTypeCategoryREF // Remove this reference just in case.
-        }
-        batchOptions.push({
+        workTypeBatch.push({
             url,
             method: 'post' as const,
             headers,
             payload: JSON.stringify(payload)
         })
     })
+    // Create work subtype batch
+    workTypeNames.forEach((workTypeName) => {
+        const subtype = workSubtypes.find((each) => each.Name === workTypeName)
+        if(!subtype) {
+            return
+        }
+        const url = baseUrl + '/Resource/Organization/OrganizationWorkSubtype'
+        const payload: ISubconWorkTypePayload = {
+            OrganizationREF: subcontractorREF,
+            WorkSubtypeCategoryREF: subtype.ObjectID
+        }
+        subtypeBatch.push({
+            url,
+            method: 'post',
+            headers,
+            payload: JSON.stringify(payload)
+        })
+    })
     try {
-        const responses = UrlFetchApp.fetchAll(batchOptions)
-        const errors = responses.filter((res) => res.getResponseCode() >= 400) // Filter out all codes that are successes (200, 201)
-        if(errors.length > 0) {
-            throw new Error(`The following worktypes returned with an error: \n${errors.map((err) => {
+        const workTypeResponses = UrlFetchApp.fetchAll(workTypeBatch)
+        const workTypeErrors = workTypeResponses.filter((res) => res.getResponseCode() >= 400) // Filter out all codes that are successes (200, 201)
+        if(workTypeErrors.length > 0) {
+            throw new Error(`The following worktypes returned with an error: \n${workTypeErrors.map((err) => {
                 // Responses returns in the same order as they are sent, so we can use the index of the responses object to match to the work type name.
-                const index = responses.findIndex((each) => each === err) 
+                const index = workTypeResponses.findIndex((each) => each === err) 
                 // BatchOptions was created in the same order as workTypeNames obj, so we can assume this index references the correct worktype (or subtype)
-                return `{Work Type: ${workTypeNames[index]}, Error code: ${err.getResponseCode()}}\n`
+                return `{Work Type: ${workTypes[index].Name}, Error code: ${err.getResponseCode()}}\n`
+            })}`)
+        }
+
+        // Do the same as above for work subtypes
+        const subtypeResponses = UrlFetchApp.fetchAll(subtypeBatch)
+        const subtypeErrors = subtypeResponses.filter((res) => res.getResponseCode() >= 400)
+        if(subtypeErrors.length > 0) {
+            throw new Error(`The following work subtypes returned with an error: \n${subtypeErrors.map((err) => {
+                // Responses returns in the same order as they are sent, so we can use the index of the responses object to match to the work type name.
+                const index = subtypeResponses.findIndex((each) => each === err) 
+                // BatchOptions was created in the same order as workTypeNames obj, so we can assume this index references the correct worktype (or subtype)
+                return `{Work Subtype: ${workSubtypes[index].Name}, Error code: ${err.getResponseCode()}}\n`
             })}`)
         }
     } catch (err) {
-        throw new Error(`An error occured adding subcontractor work types. Error: ${err}`)
+        throw new Error(`An error occured adding subcontractor work types. Error Message: ${err}`)
     }
-
 }
 
 function _getWorkTypes(token: string, baseUrl: string) {
