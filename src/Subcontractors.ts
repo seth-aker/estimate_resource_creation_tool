@@ -151,9 +151,40 @@ function _addSubcontractorWorkTypes(workTypeNames: string[], subcontractorREF: s
         'Content-Type': 'application/json'
     }
     const {workTypes, workSubtypes} = _getWorkTypes(token, baseUrl)
+
+    const parentIDMap = new Map(workTypes.map((each) => [each.ObjectID, each.Name]))
+    const subtypeParentMap = new Map(workSubtypes.map(each => [each.Name, each.CategoryREF!])) // CategoryREF should never be undefined here because a subtype in B2W will always have a category ref
+     
+    // Filter out all of the subtypes from the workTypeNames array
+    const allSubtypeNames = workSubtypes.map(each => each.Name)
+    const subtypeNames = workTypeNames.filter((each) => allSubtypeNames.includes(each))
+
+    // Create a set that includes all of the required parents that need to exist in B2W in order to attach subtypes to the subcontractor
+    const requiredParentsForSubtypes = new Set<string>()
+    subtypeNames.forEach(subTypeName => {
+        // Get the parent ref for the subtype
+        const subtypeParentREF = subtypeParentMap.get(subTypeName)
+        if(!subtypeParentREF) {
+            throw new Error(`Could not find the parent ref for subtype: ${subTypeName}`)
+        }
+        // Get the parent name and add it to the required parents ref.
+        const requiredParent = parentIDMap.get(subtypeParentREF)
+        if(!requiredParent) {
+            throw new Error(`Could not find the parent name for subtype: ${subTypeName}`)
+        }
+        requiredParentsForSubtypes.add(requiredParent)
+    })
+    // If workTypeNames does not include a required parent work type, add it to the list.
+    requiredParentsForSubtypes.forEach((value) => {
+        if(!workTypeNames.includes(value)) {
+            workTypeNames.push(value)
+        }
+    })
+
     // Prepare to send the requests.
     const workTypeBatch: GoogleAppsScript.URL_Fetch.URLFetchRequest[] = []
     const subtypeBatch: GoogleAppsScript.URL_Fetch.URLFetchRequest[] = []
+    
     // Create Work types Batch
     workTypeNames.forEach((workTypeName) => {
         const workType = workTypes.find((each) => each.Name === workTypeName)
@@ -172,6 +203,7 @@ function _addSubcontractorWorkTypes(workTypeNames: string[], subcontractorREF: s
             payload: JSON.stringify(payload)
         })
     })
+
     // Create work subtype batch
     workTypeNames.forEach((workTypeName) => {
         const subtype = workSubtypes.find((each) => each.Name === workTypeName)
@@ -189,6 +221,7 @@ function _addSubcontractorWorkTypes(workTypeNames: string[], subcontractorREF: s
             headers,
             payload: JSON.stringify(payload)
         })
+
     })
     try {
         const workTypeResponses = UrlFetchApp.fetchAll(workTypeBatch)
@@ -198,10 +231,11 @@ function _addSubcontractorWorkTypes(workTypeNames: string[], subcontractorREF: s
                 // Responses returns in the same order as they are sent, so we can use the index of the responses object to match to the work type name.
                 const index = workTypeResponses.findIndex((each) => each === err) 
                 // BatchOptions was created in the same order as workTypeNames obj, so we can assume this index references the correct worktype (or subtype)
-                return `{Work Type: ${workTypes[index].Name}, Error code: ${err.getResponseCode()}}\n`
+                const worktype = workTypes.find(each => each.ObjectID === JSON.parse(workTypeBatch[index].payload as string).WorkTypeCategoryREF)?.Name
+                return `{Work Type: ${worktype}, Error code: ${err.getResponseCode()}}\n`
             })}`)
         }
-
+        
         // Do the same as above for work subtypes
         const subtypeResponses = UrlFetchApp.fetchAll(subtypeBatch)
         const subtypeErrors = subtypeResponses.filter((res) => res.getResponseCode() >= 400)

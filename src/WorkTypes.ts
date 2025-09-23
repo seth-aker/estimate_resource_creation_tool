@@ -6,7 +6,8 @@ interface ICategoryItem {
   AntiTamperToken: string,
   EstimateREF: string,
   Name: string,
-  ObjectID: string
+  ObjectID: string,
+  CategoryREF?: string
 }
 
 interface ICategoryGetResponse {
