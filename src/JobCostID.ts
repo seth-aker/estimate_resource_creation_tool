@@ -44,6 +44,7 @@ function CreateJCIDS() {
     })
   } catch (err) {
     Logger.log(`An unexpected error occured: ${err}`);
+    throw err
   }
 
   // Show alerts based on the results
