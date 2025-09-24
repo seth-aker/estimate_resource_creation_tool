@@ -3,11 +3,14 @@ export const mockUi = {
     alert: vi.fn()
 }
 export const mockRange = {
-  setBackground: vi.fn()
+  setBackground: vi.fn(),
+  getValue: vi.fn(),
+  getValues: vi.fn()
 }
 export const mockSheet = {
   getRange: vi.fn(() => mockRange),
-  getLastColumn: vi.fn()
+  getLastColumn: vi.fn(),
+  getDataRange: vi.fn(() => mockRange)
 }
 const mockSpreadsheet = {
   getActiveSheet: vi.fn(() => mockSheet),

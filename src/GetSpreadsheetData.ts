@@ -2,7 +2,7 @@ type ISpreadsheetValues = Number | Boolean | Date | String
 
 function getSpreadSheetData<T>(spreadsheetName: string): T[] {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(spreadsheetName);
-  if(!sheet) throw new Error(`An error occured getting "${spreadsheetName}"`)
+  if(!sheet) throw new Error(`Could not find spreadsheet: "${spreadsheetName}"`)
   const dataRange = sheet.getDataRange(); // Get data
   const data = dataRange.getValues(); // create 2D array
   
@@ -22,6 +22,5 @@ function getSpreadSheetData<T>(spreadsheetName: string): T[] {
     }
     jsonData.push(row);
   }
-  Logger.log(JSON.stringify(jsonData, null, 2))
   return jsonData as T[];
 }

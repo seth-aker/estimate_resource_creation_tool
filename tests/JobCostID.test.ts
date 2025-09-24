@@ -9,7 +9,7 @@ const mocks = {
   // __proto__: gas.globalMockDefaults
 }
 
-const glib = gas.require('./dist/src', mocks)
+const glib = gas.require('./dist', mocks)
 describe('CreateJCIDS', () => {
   beforeEach(() => {
     vi.resetAllMocks()

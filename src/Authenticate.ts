@@ -18,15 +18,15 @@ function _getSpreadsheetVars() {
     return
   }
   if(!clientSec) {
-    SpreadsheetApp.getUi().alert('Client Secret required')
+    SpreadsheetApp.getUi().alert('Client Secret required!')
     return
   }
   if(!userName) {
-    SpreadsheetApp.getUi().alert('Username required')
+    SpreadsheetApp.getUi().alert('Username required!')
     return
   }
   if(!userPW) {
-    SpreadsheetApp.getUi().alert('Passord required')
+    SpreadsheetApp.getUi().alert('Password required!')
     return
   }
   return {
@@ -55,11 +55,18 @@ function _getToken(baseUrl: string, credentials: Credentials) {
     'method': 'get' as const,
     'headers': tokenHeader
   };
-
-  const response = UrlFetchApp.fetch(`${baseUrl}/login`, options);
-  const token = JSON.parse(response.getContentText()).AccessToken;
-  Logger.log('Access Token: ' + token);
-  return token as string
+  try {
+    const response = UrlFetchApp.fetch(`${baseUrl}/login`, options);
+    const responseCode = response.getResponseCode()
+    if(responseCode !== 200) {
+      throw new Error(`An error occured authenticating with the Estimate API. Error code: ${responseCode}`)
+    }
+    const token = JSON.parse(response.getContentText()).AccessToken;
+    return token as string
+  } catch (err) {
+    Logger.log(err)
+    throw err
+  }
 }
 /**
  * Used to authenticate with the api and returns the necessary information to call endpoints.
