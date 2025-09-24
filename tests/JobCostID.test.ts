@@ -1,40 +1,67 @@
 import gas from 'gas-local';
-import path from 'path'
-import { vi, beforeEach, test,expect } from 'vitest'
-const SpreadsheetApp = {
-  getUi: vi.fn(() => SpreadsheetApp),
-  alert: vi.fn(),
-  getActiveSpreadsheet: vi.fn(() => SpreadsheetApp),
-  getActiveSheet: vi.fn(),
-  getRange: vi.fn(() => SpreadsheetApp),
-  getLastColumn: vi.fn(),
-  getBackgroundColor: vi.fn(),
-  getSheetByName: vi.fn(() => SpreadsheetApp),
-  getValue: vi.fn(),
-}
-const UrlFetchApp = {
-  fetch: vi.fn()
-}
-const authenticate = vi.fn()
-const mocks = {
-  SpreadsheetApp,
-  UrlFetchApp,
-  authenticate,
-  __proto__: gas.globalMockDefaults
-}
-const filterfunc = (f: any) => {
-  const ext = path.extname(f)
-  return ext == '.ts'
-}
-const glib = gas.require('./src', mocks, {filter: filterfunc})
-console.log(glib)
-beforeEach(() => {
-  vi.resetAllMocks()
-})
+import { vi, beforeEach, expect, describe, it } from 'vitest'
+import { mockSpreadsheetApp, mockUrlFetchApp, mockUi, mockLogger, mockAuthenticate, mockRange, mockSheet } from './mocks';
 
-test('CreateJCIDS exits early if getSpreadsheetData returns with no data', () => {
-  glib.CreateJCIDS()
-  expect(glib.mocks.authenticate).toHaveBeenCalledOnce()
-  expect(glib.mocks.Logger.log).toHaveBeenCalledExactlyOnceWith("No data to send!")
-  expect(glib.SpreadsheetApp.alert).toHaveBeenCalledExactlyOnceWith("No data to send!")
+const mocks = {
+  SpreadsheetApp: mockSpreadsheetApp,
+  UrlFetchApp: mockUrlFetchApp,
+  Logger: mockLogger,
+  // __proto__: gas.globalMockDefaults
+}
+
+const glib = gas.require('./dist/src', mocks)
+describe('CreateJCIDS', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    glib.authenticate = mockAuthenticate
+  })
+
+  it('exits early if getSpreadSheetData returns with no data', () => {
+    glib.getSpreadSheetData = vi.fn(() => [])
+    glib.CreateJCIDS()
+    expect(glib.getSpreadSheetData).toHaveBeenCalledOnce();
+    expect(mockAuthenticate).toHaveBeenCalledOnce();
+    expect(mocks.Logger.log).toHaveBeenCalledOnce();
+    expect(mocks.Logger.log).toHaveBeenCalledWith("No data to send!");
+    expect(mockSpreadsheetApp.getUi).toHaveBeenCalled();
+    expect(mockUi.alert).toHaveBeenCalledExactlyOnceWith("No data to send!");
+    expect(mockUrlFetchApp.fetch).not.toHaveBeenCalled();
+    expect(mockAuthenticate).toHaveBeenCalledOnce()
+    expect(mocks.Logger.log).toHaveBeenCalledExactlyOnceWith("No data to send!")
+  })
+  it('alerts the user all records were created when UrlFetchApp returns with no errors', () => {
+    glib.getSpreadSheetData = vi.fn(() => [
+      {Description: 'Dummy data1', Code: 'moreDummyData'},
+      {Description: 'Dummy data2', Code: 'moreDummyData2'}
+    ])
+    mockUrlFetchApp.fetchAll.mockReturnValue([
+      { getResponseCode: () => 201 },
+      { getResponseCode: () => 201 }
+    ])
+    glib.CreateJCIDS()
+    
+    expect(mocks.Logger.log).toHaveBeenCalledTimes(2)
+    expect(mocks.Logger.log).nthCalledWith(1, 'Row 2: Successfully created')
+    expect(mocks.Logger.log).nthCalledWith(2, 'Row 3: Successfully created')
+    expect(mockUi.alert).toHaveBeenCalledWith('All records were created successfully!')
+  })
+  it('logs rows with error codes, modifies the row background color and alerts the user some rows failed', () => {
+    glib.getSpreadSheetData = vi.fn(() => [
+      {Description: 'Dummy data1', Code: 'moreDummyData'},
+      {Description: 'Dummy data2', Code: 'moreDummyData2'}
+    ])
+    mockUrlFetchApp.fetchAll.mockReturnValue([
+      { getResponseCode: () => 400 },
+      { getResponseCode: () => 201 }
+    ])
+    glib.CreateJCIDS()
+
+    expect(mocks.Logger.log).toHaveBeenCalledTimes(2)
+    expect(mocks.Logger.log).nthCalledWith(1, 'Row 2: Failed with status code 400')
+    expect(mocks.Logger.log).nthCalledWith(2, 'Row 3: Successfully created')
+    expect(mockSheet.getRange).toHaveBeenCalledWith(2, 1,1, undefined)
+    expect(mockRange.setBackground).toHaveBeenCalledWith('yellow')
+    expect(mockUi.alert).toHaveBeenCalledWith("Some records failed to create. Failed rows: 2")
+  })
 })
+  

@@ -1,6 +1,7 @@
 {
 	"scripts": {
-		"build": "tsc && copy appsscript.json dist\\",
+		"test": "vitest",
+		"build": "tsc && copy appsscript.json dist\\src\\",
 		"push": "pnpm run build && pnpm clasp push"
 	},
 	"dependencies": {
