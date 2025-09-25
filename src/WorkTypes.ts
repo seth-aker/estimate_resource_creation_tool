@@ -60,15 +60,15 @@ function _createWorkTypes(workTypesData: TWorkType[], token: string, baseUrl: st
       // If the entity already exists will recieve a code of 409 so make sure to only capture real errors
       if (responseCode >= 400 && responseCode !== 409) {
         failedWorkTypes.push(workTypeArray[index])
-        Logger.log(`Work Type: ${workTypeArray[index]} failed to create with status code ${responseCode}`)
+        Logger.log(`Work Type: "${workTypeArray[index]}" failed to create with status code ${responseCode}`)
         return
       }
 
       // If the entity already exists, the server does not send it, so we have to get the data ourselves.
       if(responseCode === 200 || responseCode === 409) {
-        Logger.log(`Work Type: ${workTypeArray[index]} already existed in the database.`)
+        Logger.log(`Work Type: "${workTypeArray[index]}" already existed in the database.`)
         // This should find only one result
-        const getUrl = url + `/?filter=EstimateREF eq ${gESTIMATE_REF} and Name eq '${workTypeArray[index]}'`
+        const getUrl = url + `?filter=EstimateREF eq ${gESTIMATE_REF} and Name eq '${workTypeArray[index]}'`
         const options = {
           method: 'get' as const,
           headers,
@@ -82,7 +82,7 @@ function _createWorkTypes(workTypesData: TWorkType[], token: string, baseUrl: st
         responseData = JSON.parse(createResponse.getContentText()).Items[0]
       } else {
         // This is the expected case 90% of the time
-        Logger.log(`Work type: ${workTypeArray[index]} successfully created.`)
+        Logger.log(`Work Type: "${workTypeArray[index]}" successfully created.`)
         responseData = JSON.parse(response.getContentText()).Item
       } 
       // Once the parent work type is created, we call createWorkSubtypes to create all of the subtypes for the parent (if any)
@@ -155,12 +155,13 @@ function _createWorkSubtypes(workTypesData: TWorkType[], workType: ICategoryItem
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
       if(responseCode === 200 || responseCode === 409) {
-        Logger.log(`Work Type: ${workSubTypes[index].Name} already existed in the database.`)
+        Logger.log(`Work Subtype: "${workSubTypes[index].Name}" already existed in the database.`)
       } else if (responseCode !== 201) {
         failedWorkSubTypes.push({workType: workType.Name, workSubtype: workSubTypes[index].Name as string})
-        Logger.log(`Work Subtype: ${workSubTypes[index].Name} failed to create with status code ${responseCode}`)
+        Logger.log(`Work Subtype: "${workSubTypes[index].Name}" failed to create with status code ${responseCode}`)
+      } else {
+        Logger.log(`Work Subtype "${workSubTypes[index].Name}" successfully created.`)
       }
-      Logger.log(`WorkSubtype ${workSubTypes[index].Name} successfully created.`)
     })
   } catch (err) {
     throw new Error(`An unexpected error occured creating work subtypes. Error: ${err}`)
