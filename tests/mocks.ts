@@ -12,9 +12,9 @@ export const mockSheet = {
   getLastColumn: vi.fn(),
   getDataRange: vi.fn(() => mockRange)
 }
-const mockSpreadsheet = {
+export const mockSpreadsheet = {
   getActiveSheet: vi.fn(() => mockSheet),
-  getSheetByName: vi.fn(() => mockSheet)
+  getSheetByName: vi.fn(() => mockSheet as typeof mockSheet | null)
 }
 export const mockSpreadsheetApp = {
     getUi: vi.fn(() => mockUi),

@@ -10,15 +10,15 @@ function getSpreadSheetData<T>(spreadsheetName: string): T[] {
   const headers = data[0]; 
   const jsonData = [];
 
-  for(let i = 1; i < data.length; i++) {
+  for(let rowIndex = 1; rowIndex < data.length; rowIndex++) {
     const row: Record<string, ISpreadsheetValues> = {}
-    for(let j = 0; j < headers.length; j++) {
-      const value = data[i][j] as ISpreadsheetValues;
+    for(let colIndex = 0; colIndex < headers.length; colIndex++) {
+      let value = data[rowIndex][colIndex] as ISpreadsheetValues;
       // Trim whitespace if the value is a string
       if(typeof value === 'string') {
-        value.trim()
+        value = value.trim()
       }
-      row[headers[j]] = value;
+      row[headers[colIndex]] = value;
     }
     jsonData.push(row);
   }
