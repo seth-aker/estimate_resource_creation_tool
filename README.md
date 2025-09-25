@@ -18,8 +18,8 @@ pnpm push
 
 ### Run Tests
 ```bash
+# In order for the tests to work properly, the project files must be compiled from Typescript to Javascript. This is done with test script.
 pnpm test
-# OR
-pnpm vitest
+
 ```
 
