@@ -9,11 +9,17 @@ pnpm install
 
 ### Build & Push to the Cloud
 ```bash
-# Build and push separately
-pnpm build && pnpm clasp push
+# Build 
+pnpm build
 
 # Build and push combined 
 pnpm push
 ```
 
+### Run Tests
+```bash
+pnpm test
+# OR
+pnpm vitest
+```
 
