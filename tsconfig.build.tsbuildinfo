@@ -1,1 +1,1 @@
-{"root":["./src/authenticate.ts","./src/customers.ts","./src/getspreadsheetdata.ts","./src/globals.ts","./src/jobcostid.ts","./src/subcontractors.ts","./src/worktypes.ts"],"version":"5.9.2"}
+{"root":["./src/authenticate.ts","./src/customers.ts","./src/getspreadsheetdata.ts","./src/jobcostid.ts","./src/materialcategorymodal.ts","./src/subcontractors.ts","./src/utils.ts","./src/vendors.ts","./src/worktypes.ts"],"version":"5.9.2"}

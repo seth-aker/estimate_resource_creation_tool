@@ -29,6 +29,7 @@ function _getSpreadsheetVars() {
     SpreadsheetApp.getUi().alert('Password required!')
     return
   }
+  BASE_URL = baseUrl
   return {
     baseUrl,
     clientID: clientID,
@@ -62,6 +63,7 @@ function _getToken(baseUrl: string, credentials: Credentials) {
       throw new Error(`An error occured authenticating with the Estimate API. Error code: ${responseCode}`)
     }
     const token = JSON.parse(response.getContentText()).AccessToken;
+    TOKEN = token
     return token as string
   } catch (err) {
     Logger.log(err)
@@ -74,7 +76,10 @@ function _getToken(baseUrl: string, credentials: Credentials) {
  * @returns token: string, baseUrl: string
  */
 function authenticate() {
-  // use to get bearer to
+  // use to get bearer token
+  if(TOKEN && BASE_URL) {
+    return {token: TOKEN, baseUrl: BASE_URL}
+  }
   const spreadsheetVars = _getSpreadsheetVars()
   if(!spreadsheetVars) throw new Error("Missing API_Information!")
   const token = _getToken(spreadsheetVars.baseUrl, spreadsheetVars)

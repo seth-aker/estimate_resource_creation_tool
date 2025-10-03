@@ -2,17 +2,6 @@ type TWorkType = {
   "Work Type": string,
   "Work Subtype": string
 }
-interface ICategoryItem {
-  AntiTamperToken: string,
-  EstimateREF: string,
-  Name: string,
-  ObjectID: string,
-  CategoryREF?: string
-}
-
-interface ICategoryGetResponse {
-  Items: ICategoryItem[]
-}
 function CreateWorkTypes() {
   const {token, baseUrl} = authenticate()
   const workTypesData = getSpreadSheetData<TWorkType>("Work Types")
@@ -40,7 +29,7 @@ function _createWorkTypes(workTypesData: TWorkType[], token: string, baseUrl: st
   // Post each work type to the api.
   const batchOptions = workTypeArray.map((workType) => {
     const payload = {
-      "EstimateREF": gESTIMATE_REF,
+      "EstimateREF": ESTIMATE_REF,
       "Name": workType
     }
     const options = {
@@ -68,7 +57,7 @@ function _createWorkTypes(workTypesData: TWorkType[], token: string, baseUrl: st
       if(responseCode === 200 || responseCode === 409) {
         Logger.log(`Work Type: "${workTypeArray[index]}" already existed in the database.`)
         // This should find only one result
-        const getUrl = url + `?filter=EstimateREF eq ${gESTIMATE_REF} and Name eq '${workTypeArray[index]}'`
+        const getUrl = url + `?filter=EstimateREF eq ${ESTIMATE_REF} and Name eq '${workTypeArray[index]}'`
         const options = {
           method: 'get' as const,
           headers,
@@ -87,6 +76,7 @@ function _createWorkTypes(workTypesData: TWorkType[], token: string, baseUrl: st
       } 
       // Once the parent work type is created, we call createWorkSubtypes to create all of the subtypes for the parent (if any)
       const createSubtypesResult = _createWorkSubtypes(workTypesData, responseData, token, baseUrl)
+      // The result of _createWorkSubtypes is an array of any subtypes that failed to be created.
       failedSubtypes.push(...createSubtypesResult)
     })
   } catch (err) {
@@ -129,7 +119,7 @@ function _createWorkSubtypes(workTypesData: TWorkType[], workType: ICategoryItem
     })
     .map((row) => {
       return {
-        EstimateREF: gESTIMATE_REF,
+        EstimateREF: ESTIMATE_REF,
         Name: row['Work Subtype'],
         CategoryREF: workTypeId
       }

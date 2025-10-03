@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <base target="_top">
+    </head>
+    <body>
+        <h2>Create New Material Categories</h2>
+        <form id="material-form" onsubmit=" handleSubmit(this)">
+
+            <table id="material-table">
+                <thead>
+                    <tr id="header-row">
+                        <th>Material Category</th>
+                        <th>Category Type</th>
+                        <th>Parent Category</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <? for(let i = 0; i < matCats.length; i++) { ?>
+                        <tr id="<?= `row-${i}` ?>">
+                            <td><?= matCats[i] ?></td>
+                            <td>
+                                <input id="<?= `isSubCat${i}` ?>" name="<?= `isSubCat${i}` ?>" type="checkbox" onchange="toggleSelect(this)">
+                                <label for="<?= `isSubCat${i}` ?>"> Is Subcategory?</label>
+                            </td>
+                            <td>
+                                <select id="<?= `selectedParent${i}` ?>" name="<?= `selectedParent${i}` ?>" disabled>
+                                    <option value="" disabled selected>Select a parent...</option>
+                                    <? for(let j = 0; j < parentCatOptions.length; j++) { ?>
+                                        <option value="<?= parentCatOptions[j] ?>"><?= parentCatOptions[j] ?></option> 
+                                    <? } ?>
+                                </select>
+                            </td>
+                        </tr>
+                    <? } ?>
+                </tbody>
+            </table>
+            <button id="submit" type="submit" form="material-form" >Submit</button>
+        </form>
+    </body>
+    <script>
+        function preventFormSubmit() {
+          var forms = document.querySelectorAll('form');
+          for (var i = 0; i < forms.length; i++) {
+            forms[i].addEventListener('submit', function(event) {
+              event.preventDefault();
+            });
+          }
+        }
+        window.addEventListener('load', preventFormSubmit);
+
+        function handleSubmit(formElement) {
+            const data = []
+            for(let i = 0; i < <?= matCats.length ?>; i++) {
+                const checkbox = formElement.querySelector(`#isSubCat${i}`)
+                data.push({
+                    name: <?= matCats ?>.split(",")[i],
+                    isSubCat: checkbox.checked,
+                    parentCategoryName: checkbox.checked ? formElement.querySelector(`#selectedParent${i}`).value : null
+                })
+            }
+            google.script.run.onSubmitMaterialCategories(data)
+            google.script.host.close()
+        }
+        
+        function toggleSelect(checkbox) {
+            const select = checkbox.closest('tr').querySelector('select');
+            if (select) {
+                if (checkbox.checked) {
+                    select.disabled = false;
+                    select.required = true;
+                } else {
+                    select.disabled = true;
+                    select.required = false;
+                    select.value = ""; // Reset value
+                }
+            }
+        }
+    </script>
+</html>

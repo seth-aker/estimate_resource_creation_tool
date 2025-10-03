@@ -1,7 +1,7 @@
 {
 	"scripts": {
 		"test": "pnpm run build && vitest",
-		"build": "tsc -b ./tsconfig.build.json && copy appsscript.json dist\\",
+		"build": "tsc -b ./tsconfig.build.json && copy appsscript.json dist\\ && copy src\\*.html dist\\",
 		"push": "pnpm run build && pnpm clasp push"
 	},
 	"dependencies": {
