@@ -39,7 +39,6 @@ describe('WorkTypes', () => {
         EstimateREF: ESTIMATE_REF,
         Name: 'Asphalt',
         ObjectID: mockWorkTypeID,
-        AntiTamperToken: 'token'
       }
       const mockPayloads = [
         { EstimateREF: ESTIMATE_REF,
@@ -83,7 +82,6 @@ describe('WorkTypes', () => {
         EstimateREF: ESTIMATE_REF,
         Name: 'Asphalt',
         ObjectID: mockWorkTypeID,
-        AntiTamperToken: 'token'
       }
       const mockPayloads = [
         { EstimateREF: ESTIMATE_REF,
@@ -131,7 +129,6 @@ describe('WorkTypes', () => {
         EstimateREF: ESTIMATE_REF,
         Name: 'Asphalt',
         ObjectID: mockWorkTypeID,
-        AntiTamperToken: 'token'
       }
       const mockPayloads = [
         { EstimateREF: ESTIMATE_REF,

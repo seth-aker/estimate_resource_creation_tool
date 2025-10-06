@@ -78,10 +78,7 @@ function _createSubcontractors(subcontractorData: ISubcontractorRow[], token: st
         }
     })
     if(failedRows.length > 0) {
-        const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet()
-        failedRows.forEach((row) => {
-            sheet.getRange(row, 1,1, sheet.getLastColumn()).setBackground('yellow')
-        })
+        highlightRows(failedRows, 'red')
         SpreadsheetApp.getUi().alert(`Some rows failed to be created. Failed Rows: ${failedRows.join(', ')}`)
     } else {
         SpreadsheetApp.getUi().alert("All subcontractors successfully created.")
@@ -207,7 +204,7 @@ function _addSubcontractorWorkTypes(workTypeNames: string[], subcontractorREF: s
     })
     try {
         const workTypeResponses = UrlFetchApp.fetchAll(workTypeBatch)
-        const workTypeErrors = workTypeResponses.filter((res) => res.getResponseCode() >= 400 ) // Filter out all codes that are successes (200, 201)
+        const workTypeErrors = workTypeResponses.filter((res) => res.getResponseCode() >= 400 && res.getResponseCode() !== 409) // Filter out all codes that are successes (200, 201)
         if(workTypeErrors.length > 0) {
             throw new Error(`The following worktypes returned with an error: \n${workTypeErrors.map((err) => {
                 // Responses returns in the same order as they are sent, so we can use the index of the responses object to match to the work type name.

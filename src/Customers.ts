@@ -38,10 +38,7 @@ function CreateCustomers() {
   }
   const failedRows = _createCustomers(customerData, token, baseUrl)
   if(failedRows.length > 0) {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet()
-    failedRows.forEach((row) => {
-      sheet.getRange(row, 1,1, sheet.getLastColumn()).setBackground('yellow')
-    })
+    highlightRows(failedRows, 'red')
     SpreadsheetApp.getUi().alert(`Some rows failed to be created. Failed Rows: ${failedRows.join(', ')}`)
   } else {
     SpreadsheetApp.getUi().alert("All customers successfully created.")

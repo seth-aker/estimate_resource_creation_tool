@@ -51,7 +51,7 @@
 
         function handleSubmit(formElement) {
             const data = []
-            for(let i = 0; i < <?= matCats.length ?>; i++) {
+            for(let i = 0; i < <?= matCats.length ?>; i++) { // eslint-disable-line
                 const checkbox = formElement.querySelector(`#isSubCat${i}`)
                 data.push({
                     name: <?= matCats ?>.split(",")[i],

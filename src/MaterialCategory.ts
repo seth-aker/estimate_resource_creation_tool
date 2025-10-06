@@ -1,5 +1,5 @@
 // Creates a modal that the user can interact with to sort material categories into parent and sub categories
-function createModal(newMaterialCategories: string[], existingParents: string[]) {
+function createMaterialCategoryModal(newMaterialCategories: string[], existingParents: string[]) {
     const html = HtmlService.createTemplateFromFile('MaterialCategoryModalHTML')
     html.matCats = newMaterialCategories
     html.parentCatOptions = existingParents.concat(newMaterialCategories)
@@ -12,23 +12,32 @@ interface IMaterialCategoryFormObject {
 }
 
 function onSubmitMaterialCategories(formData: IMaterialCategoryFormObject[]) {
-    Logger.log(formData);
     const parentCategories = formData.filter((eachCat) => !eachCat.isSubCat)
     const subCategories = formData.filter((eachCat) => eachCat.isSubCat)
     const { failedCategories, createdCategories } = _createMaterialCategories(parentCategories.map(each => each.name), TOKEN, BASE_URL)
     if(failedCategories.length > 0) {
         throw new Error(`An error occured created the following material categories: ${failedCategories.join(', ')}. Check the logs to view specific error codes`)
     }
+    const subcategoryParentMap = new Map<string, string>();
+
+    subCategories.forEach(subCategory => {
+        subcategoryParentMap.set(subCategory.name, subCategory.parentCategoryName!)
+    })
+    const {failedSubcategories, createdSubcategories} = _createMaterialSubcategories(subcategoryParentMap, TOKEN, BASE_URL)
+    if(failedSubcategories.length > 0) {
+        throw new Error(`An error occured created the following material subcategories: ${failedSubcategories.join(', ')}. Check the logs to view specific error codes`)
+    }
 
     const currentSpreadsheet = SpreadsheetApp.getActiveSheet().getName()
     if(currentSpreadsheet === "Vendors") {
-
+        const vendors = getSpreadSheetData<TVendorRow>("Vendors")
+        _createVendors(vendors, createdCategories, createdSubcategories, TOKEN, BASE_URL)
     }
 }
 function TestModal() {
     const newMaterialCategories = ['demolition', 'paving', 'chicken', "cones", "pipe", "RCP", "HDPE", "Water"]
     const parentCategories = ['asphalt', 'grading', 'other',]
-    createModal(newMaterialCategories, parentCategories)
+    createMaterialCategoryModal(newMaterialCategories, parentCategories)
 }
 
 function _createMaterialCategories(materialCategories: string[], token: string, baseUrl: string) {
@@ -96,7 +105,7 @@ function _createMaterialSubcategories(subcategoryParentMap: Map<string,string>, 
     const payloads: ISubcategoryItem[] = []
     const failedSubcategories: string[] = [] 
     subcategoryParentMap.forEach((value,key) => {
-        const parentRef = parentCategories.find((item) => item.Name === value)?.ObjectID
+        const parentRef = parentCategories.find(parent => parent.Name === value)?.ObjectID
         if(!parentRef) {
             failedSubcategories.push(key)
             return
@@ -129,9 +138,9 @@ function _createMaterialSubcategories(subcategoryParentMap: Map<string,string>, 
             }
         })
         const createdSubcategories: ISubcategoryItem[] = responses.map(response => JSON.parse(response.getContentText()).Item)
+        return {failedSubcategories, createdSubcategories}
     } catch (err) {
         Logger.log(`An unexpected error occured creating material subcategories. Error: ${err}`)
         throw err
     }
-
 }
