@@ -1,3 +1,7 @@
+interface IParentSubcategoryMap {
+    parent: string,
+    sub: string
+}
 // Creates a modal that the user can interact with to sort material categories into parent and sub categories
 function createMaterialCategoryModal(newMaterialCategories: string[], existingParents: string[]) {
     const html = HtmlService.createTemplateFromFile('MaterialCategoryModalHTML')
@@ -18,12 +22,12 @@ function onSubmitMaterialCategories(formData: IMaterialCategoryFormObject[]) {
     if(failedCategories.length > 0) {
         throw new Error(`An error occured created the following material categories: ${failedCategories.join(', ')}. Check the logs to view specific error codes`)
     }
-    const subcategoryParentMap = new Map<string, string>();
+    const parentSubcategoryList: IParentSubcategoryMap[] = []
 
     subCategories.forEach(subCategory => {
-        subcategoryParentMap.set(subCategory.name, subCategory.parentCategoryName!)
+        parentSubcategoryList.push({sub: subCategory.name, parent: subCategory.parentCategoryName!})
     })
-    const {failedSubcategories, createdSubcategories} = _createMaterialSubcategories(subcategoryParentMap, TOKEN, BASE_URL)
+    const {failedSubcategories, createdSubcategories} = _createMaterialSubcategories(parentSubcategoryList, TOKEN, BASE_URL)
     if(failedSubcategories.length > 0) {
         throw new Error(`An error occured created the following material subcategories: ${failedSubcategories.join(', ')}. Check the logs to view specific error codes`)
     }
@@ -98,21 +102,21 @@ function _createMaterialCategories(materialCategories: string[], token: string, 
     return {failedCategories, createdCategories}
 }
 
-function _createMaterialSubcategories(subcategoryParentMap: Map<string,string>, token: string, baseUrl: string) {
+function _createMaterialSubcategories(subcategoryParentMap: IParentSubcategoryMap[], token: string, baseUrl: string) {
     const url = baseUrl + "/Resources/Subcategory/MaterialSubcategory"
     const headers = createHeaders(token)
     const parentCategories = getDBCategoryList('MaterialCategory', token, baseUrl)
     const payloads: ISubcategoryItem[] = []
     const failedSubcategories: string[] = [] 
-    subcategoryParentMap.forEach((value,key) => {
-        const parentRef = parentCategories.find(parent => parent.Name === value)?.ObjectID
+    subcategoryParentMap.forEach((each) => {
+        const parentRef = parentCategories.find(parent => parent.Name === each.parent)?.ObjectID
         if(!parentRef) {
-            failedSubcategories.push(key)
+            failedSubcategories.push(each.sub)
             return
         }
         payloads.push({
             EstimateREF: ESTIMATE_REF,
-            Name: key,
+            Name: each.sub,
             CategoryREF: parentRef
         })
     })

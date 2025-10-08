@@ -61,6 +61,14 @@ function createHeaders(token: string, additionalHeaders?: Record<string, string>
         ...additionalHeaders
     }
 }
+
+/**
+ * @param categoryName Name of the category, ie MaterialCategory or Worktype
+ * @param token The access token
+ * @param baseUrl The db base url
+ * @param query A OData query to pass to the database. Defaults to `?$fitler=EstimateREF eq ${ESTIMATE_REF}`
+ * @returns ICategoryItem[]
+ */
 function getDBCategoryList(categoryName: string, token: string, baseUrl: string, query: string = `?$filter=EstimateREF eq ${ESTIMATE_REF}`) {
     const url = baseUrl + `/Resource/Category/${categoryName}${query}`
     const headers = createHeaders(token)
@@ -123,4 +131,60 @@ function highlightRows(rowIndices: number[], color: string) {
     rowIndices.forEach((row) => {
       sheet.getRange(row, 1,1, sheet.getLastColumn()).setBackground(color)
     })
+}
+
+function deepIncludes(array: any[], searchElement: any) {
+  for(const item of array) {
+    if(deepEquals(item, searchElement)) {
+      return true
+    }
+  }
+  return false
+}
+function deepEquals(x: any, y: any, seen = new Map()) {
+  // If they are the same object or are primatives
+  if(x === y) {
+    return true;
+  }
+  // make sure they are objects and are not null.
+  if(typeof x !== 'object' || x === null || typeof y !== 'object' || y === null) {
+    return false
+  }
+
+  // This handles self referencing properties in objects
+  if(seen.has(x) && seen.get(x) === y) {
+    return true
+  }
+  seen.set(x,y);
+
+  // If they have different constructors, exit early.
+  if(x.constructor !== y.constructor) {
+    return false
+  }
+  // Handle arrays
+  if(Array.isArray(x)) {
+    if(x.length !== y.length) {
+      for (let index in x) {
+        if(!deepEquals(x[index], y[index], seen)) {
+          return false
+        }
+      }
+      return true
+    }
+  }
+  if (x instanceof Date) { // Handle Dates
+      return x.getTime() === y.getTime();
+  }
+  // Return false if they don't have the same number of properties
+  if(Object.keys(x).length !== Object.keys(y).length) {
+    return false
+  }
+  for(let key of Object.keys(x)) {
+    // if y doesn't have the same properties as x
+    if(!Object.prototype.hasOwnProperty.call(y, key) || !deepEquals(x[key], y[key], seen)) {
+      return false;
+    } 
+  }
+  // If we have looped through each property of x and have determined they are equal to y, return true
+  return true
 }
