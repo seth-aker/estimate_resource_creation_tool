@@ -67,12 +67,12 @@ function CreateVendors() {
     }
     // If there are material categories that don't already exist in the database, we have to create them before creating the vendors and attaching the categories.
     // This should be done first because the result of "createModal" cannot be awaited and we would have to retrieve all the vendor ids from the db in another call. Prevents another db call.
-    if(materialCategories.size > 0) {
-        createMaterialCategoryModal(Array.from(materialCategories), parentMaterialCategories.map(each => each.Name))
-    } else {
+    // if(materialCategories.size > 0) {
+    //     createMaterialCategoryModal(Array.from(materialCategories), parentMaterialCategories.map(each => each.Name))
+    // } else {
         // Skip the create material category step and go straight to creating vendors.
 
-    }
+    // }
     // const {failedCategories: failedMaterialCategories, createdCategories: createdMaterialCategories} = _createMaterialCategories(Array.from(materialCategories), token, baseUrl)
     // if(failedMaterialCategories.length > 0) {
     //     throw new Error(`Script failed while creating the following material categories: ${createdMaterialCategories.join(', ')}`)

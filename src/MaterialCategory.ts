@@ -1,49 +1,48 @@
 interface IParentSubcategoryMap {
-    parent: string,
-    sub: string
+    parentRef: string,
+    subcategory: string
 }
-// Creates a modal that the user can interact with to sort material categories into parent and sub categories
-function createMaterialCategoryModal(newMaterialCategories: string[], existingParents: string[]) {
-    const html = HtmlService.createTemplateFromFile('MaterialCategoryModalHTML')
-    html.matCats = newMaterialCategories
-    html.parentCatOptions = existingParents.concat(newMaterialCategories)
-    SpreadsheetApp.getUi().showModalDialog(html.evaluate(), 'Material Categories')
-}
-interface IMaterialCategoryFormObject {
-    name: string,
-    isSubCat: boolean,
-    parentCategoryName?: string
+interface IMaterialCategoryRow {
+    'Material Category': TSpreadsheetValues,
+    'Material Subcategory': TSpreadsheetValues
 }
 
-function onSubmitMaterialCategories(formData: IMaterialCategoryFormObject[]) {
-    const parentCategories = formData.filter((eachCat) => !eachCat.isSubCat)
-    const subCategories = formData.filter((eachCat) => eachCat.isSubCat)
-    const { failedCategories, createdCategories } = _createMaterialCategories(parentCategories.map(each => each.name), TOKEN, BASE_URL)
+function CreateMaterialCategories() {
+    authenticate();
+    const materialData = getSpreadSheetData<IMaterialCategoryRow>('Material Categories')
+    if(!materialData || materialData.length === 0) {
+        Logger.log("No data to send!");
+        SpreadsheetApp.getUi().alert('No data to send!');
+        return;
+    }
+    const parentCategories = materialData.map((row) => row["Material Category"].toString())
+   
+    const {failedCategories, createdCategories} = _createMaterialCategories(parentCategories, TOKEN, BASE_URL)
     if(failedCategories.length > 0) {
-        throw new Error(`An error occured created the following material categories: ${failedCategories.join(', ')}. Check the logs to view specific error codes`)
+        throw new Error(`The following material categories failed to be created: "${failedCategories.join(`", "`)}"`)
     }
-    const parentSubcategoryList: IParentSubcategoryMap[] = []
-
-    subCategories.forEach(subCategory => {
-        parentSubcategoryList.push({sub: subCategory.name, parent: subCategory.parentCategoryName!})
-    })
-    const {failedSubcategories, createdSubcategories} = _createMaterialSubcategories(parentSubcategoryList, TOKEN, BASE_URL)
+    const parentSubcategoryMap: IParentSubcategoryMap[] = []
+     materialData.forEach((row => {
+        const parentRef = createdCategories.find((category) => category.Name === row["Material Category"])?.ObjectID as string
+        const subcategory = row["Material Subcategory"].toString();
+        if(!parentRef) {
+            return
+        }
+        const map = {
+            parentRef,
+            subcategory 
+        }
+        if(!deepIncludes(parentSubcategoryMap, map)) {
+            parentSubcategoryMap.push(map)
+        }
+    }))
+    const {failedSubcategories} = _createMaterialSubcategories(parentSubcategoryMap, TOKEN, BASE_URL)
     if(failedSubcategories.length > 0) {
-        throw new Error(`An error occured created the following material subcategories: ${failedSubcategories.join(', ')}. Check the logs to view specific error codes`)
-    }
-
-    const currentSpreadsheet = SpreadsheetApp.getActiveSheet().getName()
-    if(currentSpreadsheet === "Vendors") {
-        const vendors = getSpreadSheetData<TVendorRow>("Vendors")
-        _createVendors(vendors, createdCategories, createdSubcategories, TOKEN, BASE_URL)
+        throw new Error(`The following material subcategories failed to be created: "${failedSubcategories.join('", "')}"`)
+    } else {
+        SpreadsheetApp.getUi().alert(`All Material Categories created successfully!`)
     }
 }
-function TestModal() {
-    const newMaterialCategories = ['demolition', 'paving', 'chicken', "cones", "pipe", "RCP", "HDPE", "Water"]
-    const parentCategories = ['asphalt', 'grading', 'other',]
-    createMaterialCategoryModal(newMaterialCategories, parentCategories)
-}
-
 function _createMaterialCategories(materialCategories: string[], token: string, baseUrl: string) {
     const url = baseUrl + '/Resource/Category/MaterialCategory'
     const headers = createHeaders(token)
@@ -68,8 +67,8 @@ function _createMaterialCategories(materialCategories: string[], token: string, 
         const responses = UrlFetchApp.fetchAll(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
-            if(responseCode !== 201 && responseCode !== 200 && responseCode !== 409) {
-                Logger.log(`Category: "${materialCategories[index]}" failed to create with status code ${responseCode}`)
+            if(responseCode >= 400 && responseCode !== 409) {
+                Logger.log(`Category: "${materialCategories[index]}" failed to create with status code ${responseCode}. Error: ${response.getContentText()}`)
                 failedCategories.push(materialCategories[index])
 
                 // If entity already exists, we will need to fetch its information
@@ -82,21 +81,13 @@ function _createMaterialCategories(materialCategories: string[], token: string, 
             }
         })
         if(categoriesToGet.length > 0) {
-            const getUrl = url + `?filter=EstimateREF eq ${ESTIMATE_REF} and (Name eq '${categoriesToGet.join(' or Name eq ')}')`
-            const options = {
-                method: 'get' as const,
-                headers,
-            }
-            const response = UrlFetchApp.fetch(getUrl, options);
-            if(response.getResponseCode() !== 200) {
-                throw new Error(`An error occured searching for Material Category IDs. Error code: ${response.getResponseCode()}`)
-            }
-            const responseItems = JSON.parse(response.getContentText()).Items as ICategoryItem[]
+            const query = `?filter=EstimateREF eq ${ESTIMATE_REF} and (Name eq '${categoriesToGet.join(' or Name eq ')}')`
+            const responseItems = getDBCategoryList('MaterialCategory', TOKEN, BASE_URL, query)
             createdCategories.push(...responseItems)
         }
     } catch (err) {
         Logger.log(err)
-        throw err
+        throw new Error(`An unexpected error occured, please try again.`)
     }
 
     return {failedCategories, createdCategories}
@@ -105,19 +96,13 @@ function _createMaterialCategories(materialCategories: string[], token: string, 
 function _createMaterialSubcategories(subcategoryParentMap: IParentSubcategoryMap[], token: string, baseUrl: string) {
     const url = baseUrl + "/Resources/Subcategory/MaterialSubcategory"
     const headers = createHeaders(token)
-    const parentCategories = getDBCategoryList('MaterialCategory', token, baseUrl)
     const payloads: ISubcategoryItem[] = []
     const failedSubcategories: string[] = [] 
     subcategoryParentMap.forEach((each) => {
-        const parentRef = parentCategories.find(parent => parent.Name === each.parent)?.ObjectID
-        if(!parentRef) {
-            failedSubcategories.push(each.sub)
-            return
-        }
         payloads.push({
             EstimateREF: ESTIMATE_REF,
-            Name: each.sub,
-            CategoryREF: parentRef
+            Name: each.subcategory,
+            CategoryREF: each.parentRef
         })
     })
     const batchOptions = payloads.map(payload => ({

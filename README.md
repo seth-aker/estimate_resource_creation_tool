@@ -7,11 +7,14 @@
 pnpm install
 ```
 
-### Build & Push to the Cloud
+### Build 
 ```bash
 # Build 
 pnpm build
+```
 
+### Push to Production
+```bash
 # Build and push combined 
 pnpm push
 ```

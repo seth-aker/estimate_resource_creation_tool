@@ -1,6 +1,5 @@
-type TSystemOfMeasure = "Imperial" | "Metric"
+type TSystemOfMeasure = "imperial" | "metric"
 interface IMaterialRow {
-    "UM System": TSystemOfMeasure
     Name: string,
     Category?: string,
     Subcategory?: string,
@@ -24,8 +23,11 @@ interface IMaterialDTO extends Omit<IMaterialRow, 'UM System' & 'Unit of Measure
     TruckingCostSystemOfMeasure?: TSystemOfMeasure
     QuantityRoundingIncrementSystemOfMeasure?: TSystemOfMeasure
 }
-
-function CreateMaterials() {
+function AskForSystemUM() {
+    const html = HtmlService.createTemplateFromFile('MaterialSettingsModal')
+    SpreadsheetApp.getUi().showModalDialog(html.evaluate(), "Select System of Measure")
+}
+function CreateMaterials(systemOfMeasure: TSystemOfMeasure) {
     authenticate()
     const materialData = getSpreadSheetData<IMaterialRow>("Materials")
     if(!materialData || materialData.length === 0) {
@@ -33,31 +35,7 @@ function CreateMaterials() {
         SpreadsheetApp.getUi().alert('No data to send!');
         return;
     }
-    const materialCategories = materialData.map(each => each.Category?.trim()).filter(each => each !== undefined)
-
-    const uniqueMaterialCategories = Array.from(new Set(materialCategories))
-
-    const existingMaterialCategories = getDBCategoryList("MaterialCategory", TOKEN, BASE_URL, `?$filter=EstimateREF eq ${ESTIMATE_REF}`)
-    const existingCategoryNames = existingMaterialCategories.map(each => each.Name)
-
-    const categoriesToCreate = uniqueMaterialCategories.filter((category) => !existingCategoryNames.includes(category))
-    const {failedCategories} = _createMaterialCategories(categoriesToCreate, TOKEN, BASE_URL)
-    if(failedCategories.length > 0) {
-        throw new Error(`The following categories failed to be created: ${failedCategories.join(', ')}. See logs for more details`)
-    }
-
-    const parentSubcategoryList: IParentSubcategoryMap[] = []
-    // add all unique parent - subcat combinations
-    materialData.forEach((row) => {
-        if(row.Category && row.Subcategory && !deepIncludes(parentSubcategoryList, {parent: row.Category, sub: row.Subcategory})) {
-           parentSubcategoryList.push({parent: row.Category, sub: row.Subcategory})
-        }
-    })
-    const {failedSubcategories} = _createMaterialSubcategories(parentSubcategoryList, TOKEN, BASE_URL)
-    if(failedSubcategories.length > 0) {
-        throw new Error(`The following subcategories failed to be created: ${failedSubcategories.join(', ')}. See logs for more detail`)
-    }
-    const materialsToCreate = materialData.map((row) => createMaterialDTO(row))
+    const materialsToCreate = materialData.map((row) => createMaterialDTO(row, systemOfMeasure))
     const {failedMaterials} = _createMaterials(materialsToCreate, TOKEN, BASE_URL)
 
     if(failedMaterials.length > 0) {
@@ -102,19 +80,19 @@ function _createMaterials(materials: IMaterialDTO[], token: string, baseUrl: str
     }
 }
 
-function createMaterialDTO(materialRow: IMaterialRow) {
-    const umSystem = materialRow["UM System"]
-    let impUM: string | number
-    let metricUM: string | number
-    if(umSystem === 'Imperial') {
-        impUM = UMS[umSystem][materialRow["Unit of Measure"]]
+function createMaterialDTO(materialRow: IMaterialRow, systemOfMeasure: TSystemOfMeasure) {
+    const um = materialRow["Unit of Measure"]
+    let impUM: string 
+    let metricUM: string
+    if(systemOfMeasure === 'imperial') {
+        impUM = um
         // If the conversion object has the UM key from "material row", then return the abbreviation of the metric UM that is associated with the imperial unit
         // Else return the UM in the material row 
-        metricUM = Object.keys(UMS['imp_to_metric']).includes(materialRow["Unit of Measure"]) ? UMS['Metric'][UMS['imp_to_metric'][materialRow["Unit of Measure"]]] : UMS['Imperial'][materialRow["Unit of Measure"]]
+        metricUM = Object.keys(SYS_OF_MEASURE_CONVERSION.imp_to_metric).includes(um) ? SYS_OF_MEASURE_CONVERSION.imp_to_metric[um] : um;
     } else {
         // Do the opposite as above
-        impUM = Object.keys(UMS['metric_to_imp']).includes(materialRow["Unit of Measure"]) ? UMS['Imperial'][UMS['metric_to_imp'][materialRow["Unit of Measure"]]] : UMS['Metric'][materialRow['Unit of Measure']]
-        metricUM = UMS[umSystem][materialRow["Unit of Measure"]]
+        metricUM = um;
+        impUM = Object.keys(SYS_OF_MEASURE_CONVERSION.metric_to_imp).includes(um) ? SYS_OF_MEASURE_CONVERSION.metric_to_imp[um] : um
     }
     return {
         EstimateREF: ESTIMATE_REF,
@@ -124,16 +102,16 @@ function createMaterialDTO(materialRow: IMaterialRow) {
         ImperialUnitOfMeasure: impUM,
         MetricUnitOfMeasure: metricUM,
         BaseCost: materialRow.BaseCost,
-        BaseCostSystemOfMeasure: umSystem,
+        BaseCostSystemOfMeasure: systemOfMeasure,
         IsTemporaryMaterial: materialRow.IsTemporaryMaterial,
         TaxPercent: materialRow.TaxPercent,
         WastePercent: materialRow.WastePercent,
         TruckingCost: materialRow.TruckingCost,
-        TruckingCostSystemOfMeasure: umSystem,
+        TruckingCostSystemOfMeasure: systemOfMeasure,
         JobCostIDCode: materialRow.JobCostIDCode,
         Notes: materialRow.Notes,
         ShouldRoundQuantity: materialRow.ShouldRoundQuantity,
         QuantityRoundingIncrement: materialRow.QuantityRoundingIncrement,
-        QuantityRoundingIncrementSystemOfMeasure: umSystem
+        QuantityRoundingIncrementSystemOfMeasure: systemOfMeasure
     } as IMaterialDTO
 }
