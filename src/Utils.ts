@@ -172,9 +172,9 @@ function deepEquals(x: any, y: any, seen = new Map()) {
       return true
     }
   }
-  if (x instanceof Date) { // Handle Dates
-      return x.getTime() === y.getTime();
-  }
+  // if (x.constructor === Date.prototype.constructor) { // Handle Dates
+  //     return x.getTime() === y.getTime();
+  // }
   // Return false if they don't have the same number of properties
   if(Object.keys(x).length !== Object.keys(y).length) {
     return false

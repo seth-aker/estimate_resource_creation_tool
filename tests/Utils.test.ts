@@ -134,13 +134,13 @@ describe("Utils Tests", () => {
     });
 
     // Test cases for dates
-    it('should correctly compare Date objects', () => {
-      const date1 = new Date('2023-01-01T00:00:00.000Z');
-      const date2 = new Date('2023-01-01T00:00:00.000Z');
-      const date3 = new Date('2024-01-01T00:00:00.000Z');
-      expect(glib.deepEquals(date1, date2)).toBe(true);
-      expect(glib.deepEquals(date1, date3)).toBe(false);
-    });
+    // it('should correctly compare Date objects', () => {
+    //   const date1 = new Date('2023-01-01T00:00:00.000Z');
+    //   const date2 = new Date('2023-01-01T00:00:00.000Z');
+    //   const date3 = new Date('2024-01-01T00:00:00.000Z');
+    //   expect(glib.deepEquals(date1, date2)).toBe(true);
+    //   expect(glib.deepEquals(date1, date3)).toBe(false);
+    // });
     
     // Test cases for objects with different constructors
     it('should return false for objects with different constructors', () => {

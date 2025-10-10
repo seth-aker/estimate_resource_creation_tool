@@ -25,7 +25,7 @@ function CreateMaterialCategories() {
      materialData.forEach((row => {
         const parentRef = createdCategories.find((category) => category.Name === row["Material Category"])?.ObjectID as string
         const subcategory = row["Material Subcategory"].toString();
-        if(!parentRef) {
+        if(!parentRef || !subcategory) {
             return
         }
         const map = {
@@ -44,6 +44,9 @@ function CreateMaterialCategories() {
     }
 }
 function _createMaterialCategories(materialCategories: string[], token: string, baseUrl: string) {
+    if(materialCategories.length === 0) {
+        return {failedCategories: [], createdCategories: []}
+    }
     const url = baseUrl + '/Resource/Category/MaterialCategory'
     const headers = createHeaders(token)
     const failedCategories: string[] = []
@@ -81,8 +84,8 @@ function _createMaterialCategories(materialCategories: string[], token: string, 
             }
         })
         if(categoriesToGet.length > 0) {
-            const query = `?filter=EstimateREF eq ${ESTIMATE_REF} and (Name eq '${categoriesToGet.join(' or Name eq ')}')`
-            const responseItems = getDBCategoryList('MaterialCategory', TOKEN, BASE_URL, query)
+            const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (Name eq '${categoriesToGet.join("' or Name eq '")}')`
+            const responseItems = getDBCategoryList('MaterialCategory', token, baseUrl, query)
             createdCategories.push(...responseItems)
         }
     } catch (err) {
@@ -94,7 +97,10 @@ function _createMaterialCategories(materialCategories: string[], token: string, 
 }
 
 function _createMaterialSubcategories(subcategoryParentMap: IParentSubcategoryMap[], token: string, baseUrl: string) {
-    const url = baseUrl + "/Resources/Subcategory/MaterialSubcategory"
+    if(subcategoryParentMap.length === 0) {
+        return {failedSubcategories: [], createdSubcategories: []}
+    }
+    const url = baseUrl + "/Resource/Subcategory/MaterialSubcategory"
     const headers = createHeaders(token)
     const payloads: ISubcategoryItem[] = []
     const failedSubcategories: string[] = [] 
@@ -114,19 +120,26 @@ function _createMaterialSubcategories(subcategoryParentMap: IParentSubcategoryMa
 
     try {
         const responses = UrlFetchApp.fetchAll(batchOptions)
-        const responseCodes = responses.map(each => each.getResponseCode())
-        
-        responseCodes.forEach((code, index) => {
+        const materialSubcategoriesToFetch: ISubcategoryItem[] = []
+        const createdSubcategories: ISubcategoryItem[] = [];
+        responses.forEach((response, index) => {
+            const code = response.getResponseCode()
             if(code === 409 || code === 200) {
+                materialSubcategoriesToFetch.push(payloads[index])
                 Logger.log(`Material Subcategory "${payloads[index].Name}" already existed in the database.`)
             } else if (code !== 201) {
                 failedSubcategories.push(payloads[index].Name)
                 Logger.log(`Material Subcategory: "${payloads[index].Name}" failed to create with status code ${code}`)
             } else {
-                Logger.log(`Material Subcategory: "${payloads[index].Name} successfully created`)
+                createdSubcategories.push(JSON.parse(response.getContentText()).Item)
+                Logger.log(`Material Subcategory: "${payloads[index].Name}" successfully created`)
             }
         })
-        const createdSubcategories: ISubcategoryItem[] = responses.map(response => JSON.parse(response.getContentText()).Item)
+        if(materialSubcategoriesToFetch.length > 0) {
+            const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${materialSubcategoriesToFetch.map(each => `(Name eq '${each.Name}' and CategoryREF eq ${each.CategoryREF})`).join(" or ")})`
+            const responses = getDBSubcategoryList('MaterialSubcategory', token, baseUrl, query)
+            createdSubcategories.push(...responses)
+        }
         return {failedSubcategories, createdSubcategories}
     } catch (err) {
         Logger.log(`An unexpected error occured creating material subcategories. Error: ${err}`)
