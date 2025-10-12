@@ -16,8 +16,9 @@ function CreateMaterialCategories() {
         return;
     }
     const parentCategories = materialData.map((row) => row["Material Category"].toString())
+    const uniqueCategories = Array.from(new Set(parentCategories))
    
-    const {failedCategories, createdCategories} = _createMaterialCategories(parentCategories, TOKEN, BASE_URL)
+    const {failedCategories, createdCategories} = _createMaterialCategories(uniqueCategories, TOKEN, BASE_URL)
     if(failedCategories.length > 0) {
         throw new Error(`The following material categories failed to be created: "${failedCategories.join(`", "`)}"`)
     }

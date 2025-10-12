@@ -1,33 +1,59 @@
-type TWorkType = {
-  "Work Type": string,
-  "Work Subtype": string
+interface IWorkType {
+  "Work Type": TSpreadsheetValues,
+  "Work Subtype": TSpreadsheetValues
+}
+interface IWorkTypeSubtypeMap {
+  parentRef: string,
+  subtype: string
 }
 function CreateWorkTypes() {
   const {token, baseUrl} = authenticate()
-  const workTypesData = getSpreadSheetData<TWorkType>("Work Types")
+  const workTypesData = getSpreadSheetData<IWorkType>("Work Types")
 
   if(!workTypesData || workTypesData.length === 0) {
     Logger.log("No data to send!");
     SpreadsheetApp.getUi().alert('No data to send!');
     return;
   }
-  _createWorkTypes(workTypesData, token, baseUrl);
+  const parentWorkTypes = workTypesData.map((row) => row["Work Type"].toString())
+  const uniqueWorkTypes = Array.from(new Set(parentWorkTypes))
+  const {failedWorkTypes, createdWorkTypes} = _createWorkTypes(uniqueWorkTypes, token, baseUrl)
+  if(failedWorkTypes.length > 0) {
+    throw new Error(`The following worktype(s) failed to be created. \n${failedWorkTypes.join(", ")}`)
+  } 
+  const workTypeSubTypeMap: IWorkTypeSubtypeMap[] = []
+  workTypesData.forEach((row) => {
+    const parentRef = createdWorkTypes.find((each) => each.Name === row["Work Type"])?.ObjectID
+    const subtype = row["Work Subtype"].toString()
+    if(!parentRef || !subtype) {
+      return
+    }
+    const map = {
+      parentRef,
+      subtype
+    }
+    if(!deepIncludes(workTypeSubTypeMap, map)) {
+      workTypeSubTypeMap.push(map)
+    }
+  })
+  const {failedWorkSubtypes} = _createWorkSubtypes(workTypeSubTypeMap, token, baseUrl)
+  if(failedWorkSubtypes.length > 0) {
+    throw new Error(`The following work Subtypes failed to be created: ${failedWorkSubtypes.join(", ")}`)
+  } else {
+    SpreadsheetApp.getUi().alert("All worktypes created successfully!")
+  }
 }
 
-function _createWorkTypes(workTypesData: TWorkType[], token: string, baseUrl: string) {
-  const headers = {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
+function _createWorkTypes(workTypes: string[], token: string, baseUrl: string) {
+  if(!workTypes || workTypes.length === 0) {
+    return {failedWorkTypes: [], createdWorkTypes: []}
   }
+
+  const headers = createHeaders(token)
   const url = baseUrl + '/Resource/Category/WorkType'
-  // To notify the user work types that failed to post.
-  const failedWorkTypes: string[] = [];
-  const failedSubtypes: {workType: string, workSubtype: string}[] = []
-  // Create a set of the unique values of work types from the "Work Type" column
-  const workTypeSet = _getUniqueWorkTypes(workTypesData);
-  const workTypeArray = Array.from(workTypeSet)
+  
   // Post each work type to the api.
-  const batchOptions = workTypeArray.map((workType) => {
+  const batchOptions = workTypes.map((workType) => {
     const payload = {
       "EstimateREF": ESTIMATE_REF,
       "Name": workType
@@ -42,119 +68,85 @@ function _createWorkTypes(workTypesData: TWorkType[], token: string, baseUrl: st
   })
 
   try {
+    // To notify the user work types that failed to post.
+    const failedWorkTypes: string[] = [];
+    const createdWorkTypes: ICategoryItem[] = []
+    const workTypesToGet: string[] = []
     const responses = UrlFetchApp.fetchAll(batchOptions)
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
-      let responseData = {} as ICategoryItem
       // If the entity already exists will recieve a code of 409 so make sure to only capture real errors
       if (responseCode >= 400 && responseCode !== 409) {
-        failedWorkTypes.push(workTypeArray[index])
-        Logger.log(`Work Type: "${workTypeArray[index]}" failed to create with status code ${responseCode}`)
-        return
-      }
-
+        failedWorkTypes.push(workTypes[index])
+        Logger.log(`Work Type: "${workTypes[index]}" failed to create with status code ${responseCode}. Error: ${response.getContentText()}`)
+  
       // If the entity already exists, the server does not send it, so we have to get the data ourselves.
-      if(responseCode === 200 || responseCode === 409) {
-        Logger.log(`Work Type: "${workTypeArray[index]}" already existed in the database.`)
-        // This should find only one result
-        const getUrl = url + `?filter=EstimateREF eq ${ESTIMATE_REF} and Name eq '${workTypeArray[index]}'`
-        const options = {
-          method: 'get' as const,
-          headers,
-        }
-        const createResponse = UrlFetchApp.fetch(getUrl, options);
-        // Handle errors
-        if(createResponse.getResponseCode() >= 400) {
-          throw new Error(`Could not find Work Type: ${workTypeArray[index]} in the database even though it was expected to be there.`)
-        }
-        // Set responseData
-        responseData = JSON.parse(createResponse.getContentText()).Items[0]
+      } else if(responseCode === 200 || responseCode === 409) {
+        Logger.log(`Work Type: "${workTypes[index]}" already exists in the database`)
+        workTypesToGet.push(workTypes[index])
       } else {
-        // This is the expected case 90% of the time
-        Logger.log(`Work Type: "${workTypeArray[index]}" successfully created.`)
-        responseData = JSON.parse(response.getContentText()).Item
-      } 
-      // Once the parent work type is created, we call createWorkSubtypes to create all of the subtypes for the parent (if any)
-      const createSubtypesResult = _createWorkSubtypes(workTypesData, responseData, token, baseUrl)
-      // The result of _createWorkSubtypes is an array of any subtypes that failed to be created.
-      failedSubtypes.push(...createSubtypesResult)
-    })
-  } catch (err) {
-    Logger.log(`Error creating Work Types. Error: ${(err as Error).message}`)
-    throw err
-  }
-
-
-  if(failedWorkTypes.length === 0 && failedSubtypes.length === 0) {
-    SpreadsheetApp.getUi().alert("All worktypes created successfully!")
-    return
-  }
-  if(failedWorkTypes.length > 0) {
-    SpreadsheetApp.getUi().alert(`The following worktype(s) failed to be created. \n${failedWorkTypes.join(",\n")}`)
-  } 
-  if(failedSubtypes.length > 0) {
-    SpreadsheetApp.getUi().alert(`The following work Subtypes failed to be created \n${failedSubtypes.map(each => `Work Type: ${each.workType}, Work Subtype: ${each.workSubtype}`).join("\n")}`)
-  } 
-}
-
-function _getUniqueWorkTypes(rows: TWorkType[]) {
-  const workTypes = new Set<string>()
-  rows.forEach((row) => {
-    const workTypeName = row['Work Type'] as string
-    workTypes.add(workTypeName)
-  })
-  return workTypes
-}
-
-function _createWorkSubtypes(workTypesData: TWorkType[], workType: ICategoryItem, token: string, baseUrl: string ) {
-  if(workTypesData.length === 0) {
-    return [] // Return an empty array if there are no subtypes to create
-  }
-  const workTypeName = workType.Name
-  const workTypeId = workType.ObjectID
-  const workSubTypes = workTypesData
-    .filter((row) => {
-      // Include only worktypes in the table that match the parent and have a subtype that exists
-      return row["Work Type"] === workTypeName && (row["Work Subtype"] !== "" && row["Work Subtype"] !== undefined)
-    })
-    .map((row) => {
-      return {
-        EstimateREF: ESTIMATE_REF,
-        Name: row['Work Subtype'],
-        CategoryREF: workTypeId
+        Logger.log(`Work Type: "${workTypes[index]}" successfully created`)
+        createdWorkTypes.push(JSON.parse(response.getContentText()).Item)
       }
+    })
+    if(workTypesToGet.length > 0) {
+      const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${workTypesToGet.map(each => `Name eq '${each}'`).join(' or ')})`
+      const existingWorkTypes = getDBCategoryList('WorkType', token, baseUrl, query)
+      createdWorkTypes.push(...existingWorkTypes)
+    }
+    return {failedWorkTypes, createdWorkTypes}
+  } catch (err) {
+    throw new Error(`An unexpected error occured creating Work Types. Error: ${(err as Error).message}`)
+  }
+}
+
+function _createWorkSubtypes(workTypeSubTypeMap: IWorkTypeSubtypeMap[], token: string, baseUrl: string ) {
+  if(workTypeSubTypeMap.length === 0) {
+    return {failedWorkSubtypes: [], createdWorkSubtypes: []} // Return an empty array if there are no subtypes to create
+  }
+  const payloads = workTypeSubTypeMap.map((each) => {
+    return {
+      EstimateREF: ESTIMATE_REF,
+      Name: each.subtype,
+      CategoryREF: each.parentRef
+    }
   })
   const url = `${baseUrl}/Resource/Subcategory/WorkSubType`
-  const headers = {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }
-  const failedWorkSubTypes: {workType: string, workSubtype: string}[] = []; 
-
-  const batchOptions = workSubTypes.map((workSubType) => {
+  const headers = createHeaders(token)
+  const failedWorkSubtypes: string[] = []; 
+  const createdWorkSubtypes: ISubcategoryItem[] = []
+  const batchOptions = payloads.map((payload) => {
     const options = {
       url,
       method: 'post' as const,
       headers,
-      payload: JSON.stringify(workSubType)
+      payload: JSON.stringify(payload)
     }
     return options
   })
   try {
+    const subtypesToGet: ISubcategoryItem[] = []
     const responses = UrlFetchApp.fetchAll(batchOptions);
     responses.forEach((response, index) => {
-      const responseCode = response.getResponseCode()
+    const responseCode = response.getResponseCode()
       if(responseCode === 200 || responseCode === 409) {
-        Logger.log(`Work Subtype: "${workSubTypes[index].Name}" already existed in the database.`)
+        Logger.log(`Work Subtype: "${payloads[index].Name}" already existed in the database.`)
+        subtypesToGet.push(payloads[index])
       } else if (responseCode !== 201) {
-        failedWorkSubTypes.push({workType: workType.Name, workSubtype: workSubTypes[index].Name as string})
-        Logger.log(`Work Subtype: "${workSubTypes[index].Name}" failed to create with status code ${responseCode}`)
+        failedWorkSubtypes.push(payloads[index].Name)
+        Logger.log(`Work Subtype: "${payloads[index].Name}" failed to create with status code ${responseCode}. Error: ${response.getContentText()}`)
       } else {
-        Logger.log(`Work Subtype "${workSubTypes[index].Name}" successfully created.`)
+        Logger.log(`Work Subtype "${payloads[index].Name}" successfully created.`)
+        createdWorkSubtypes.push(JSON.parse(response.getContentText()).Item)
       }
     })
+    if(subtypesToGet.length > 0) {
+      const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${subtypesToGet.map(each => `(Name eq '${each.Name}' and CategoryREF eq ${each.CategoryREF})`).join(" or ")})`
+      const response = getDBSubcategoryList('WorkSubType', token, baseUrl, query)
+      createdWorkSubtypes.push(...response)
+    }
   } catch (err) {
     throw new Error(`An unexpected error occured creating work subtypes. Error: ${err}`)
   }
-  return failedWorkSubTypes
+  return {failedWorkSubtypes, createdWorkSubtypes}
 }
