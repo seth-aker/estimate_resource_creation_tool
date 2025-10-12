@@ -5,8 +5,8 @@ import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockUi } from './mocks
 const mockGetDBSubcategoryList = vi.fn()
 const mockGetDBCategoryList = vi.fn()
 const mockGetSpreadsheetData = vi.fn()
-const mockCreateWorkTypes = vi.fn(() => ({failedWorkTypes: [], createdWorkTypes: []}))
-const mockCreateWorkSubTypes = vi.fn(() => ({failedWorkSubtypes: [], createdWorkSubtypes: []}))
+const mockCreateWorkTypes = vi.fn(() => ({failedWorkTypes: [] as string[], createdWorkTypes: [] as ICategoryItem[]}))
+const mockCreateWorkSubTypes = vi.fn(() => ({failedWorkSubtypes: [] as string[], createdWorkSubtypes: [] as ICategoryItem[]}))
 const mocks = {
   SpreadsheetApp: mockSpreadsheetApp,
   UrlFetchApp: mockUrlFetchApp,
@@ -296,8 +296,6 @@ describe('WorkTypes', () => {
       glib._createWorkTypes = mockCreateWorkTypes
       glib._createWorkSubtypes = mockCreateWorkSubTypes
     })
-    
-
     it('returns early when there is not data in the spreadsheet', () => {
       mockGetSpreadsheetData.mockReturnValue([])
       glib.CreateWorkTypes()
@@ -318,9 +316,98 @@ describe('WorkTypes', () => {
         'Concrete'
       ]
       glib.CreateWorkTypes()
-
       expect(mockCreateWorkTypes).toHaveBeenCalledWith(expextedUniqueWorkTypes, mockToken, mockBaseUrl)
       expect(mockUi.alert).toHaveBeenCalledWith("All worktypes created successfully!")
+    })
+    it('throws an error when failed worktypes are returned by _createWorkTypes', () => {
+      const mockSpreadSheetData: IWorkType[] = [
+        {"Work Type": 'Asphalt', "Work Subtype": "" },
+        {"Work Type": 'Asphalt', "Work Subtype": ""},
+        {"Work Type": 'Concrete', "Work Subtype": ""}
+      ]
+      mockGetSpreadsheetData.mockReturnValue(mockSpreadSheetData)
+      const returnData = {failedWorkTypes: ['Asphalt', 'Concrete'], createdWorkTypes: []}
+      mockCreateWorkTypes.mockReturnValue(returnData)
+      expect(() => glib.CreateWorkTypes()).toThrowError('The following worktype(s) failed to be created: Asphalt, Concrete')
+    })
+    it('properly formats responses from _createWorkTypes and correctly calls _createWorkSubtypes', () => {
+      const mockSpreadSheetData: IWorkType[] = [
+        {"Work Type": 'Asphalt', "Work Subtype": "Paving" },
+        {"Work Type": 'Asphalt', "Work Subtype": "Demolition"},
+        {"Work Type": 'Asphalt', "Work Subtype": ""},
+        {"Work Type": 'Concrete', "Work Subtype": "Sidewalks"}
+      ]
+      mockGetSpreadsheetData.mockReturnValue(mockSpreadSheetData)
+      const expectedUniqueWorkTypes = [
+        'Asphalt',
+        'Concrete'
+      ]
+      const mockCreateWorkTypesReturnData = {
+        failedWorkTypes: [],
+        createdWorkTypes: [
+          {
+            EstimateREF: ESTIMATE_REF,
+            Name: 'Asphalt',
+            ObjectID: 'asphaltID'
+          },
+          {
+            EstimateREF: ESTIMATE_REF,
+            Name: 'Concrete',
+            ObjectID: 'concreteID'
+          }
+        ]
+      }
+      mockCreateWorkTypes.mockReturnValue(mockCreateWorkTypesReturnData)
+      mockCreateWorkSubTypes.mockReturnValue({failedWorkSubtypes: [], createdWorkSubtypes: []})
+      const expectedWorkSubtypeMap = [
+        {parentRef: 'asphaltID', subtype: 'Paving'},
+        {parentRef: 'asphaltID', subtype: 'Demolition'},
+        {parentRef: 'concreteID', subtype: 'Sidewalks'}
+      ]
+
+      glib.CreateWorkTypes()
+
+      expect(mockCreateWorkTypes).toHaveBeenCalledWith(expectedUniqueWorkTypes, mockToken, mockBaseUrl)
+      expect(mockCreateWorkSubTypes).toHaveBeenCalledWith(expectedWorkSubtypeMap, mockToken, mockBaseUrl)
+      expect(mockUi.alert).toHaveBeenCalledWith('All worktypes created successfully!')
+    })
+
+    it('throws error when _createWorkSubtypes returns failed subtypes', () => {
+      const mockSpreadSheetData: IWorkType[] = [
+        {"Work Type": 'Asphalt', "Work Subtype": "Paving" },
+        {"Work Type": 'Asphalt', "Work Subtype": "Demolition"},
+        {"Work Type": 'Asphalt', "Work Subtype": ""},
+        {"Work Type": 'Concrete', "Work Subtype": "Sidewalks"}
+      ]
+      mockGetSpreadsheetData.mockReturnValue(mockSpreadSheetData)
+      const expectedUniqueWorkTypes = [
+        'Asphalt',
+        'Concrete'
+      ]
+      const mockCreateWorkTypesReturnData = {
+        failedWorkTypes: [],
+        createdWorkTypes: [
+          {
+            EstimateREF: ESTIMATE_REF,
+            Name: 'Asphalt',
+            ObjectID: 'asphaltID'
+          },
+          {
+            EstimateREF: ESTIMATE_REF,
+            Name: 'Concrete',
+            ObjectID: 'concreteID'
+          }
+        ]
+      }
+      mockCreateWorkTypes.mockReturnValue(mockCreateWorkTypesReturnData)
+      mockCreateWorkSubTypes.mockReturnValue({
+        failedWorkSubtypes: ['Paving', 'Demolition', 'Sidewalks'],
+        createdWorkSubtypes: []
+      })
+      
+      expect(() => glib.CreateWorkTypes()).toThrowError('The following work Subtypes failed to be created: Paving, Demolition, Sidewalks')
+      expect(mockCreateWorkTypes).toHaveBeenCalledWith(expectedUniqueWorkTypes, mockToken, mockBaseUrl)
+
     })
   })
 })

@@ -19,7 +19,7 @@ function CreateWorkTypes() {
   const uniqueWorkTypes = Array.from(new Set(parentWorkTypes))
   const {failedWorkTypes, createdWorkTypes} = _createWorkTypes(uniqueWorkTypes, token, baseUrl)
   if(failedWorkTypes.length > 0) {
-    throw new Error(`The following worktype(s) failed to be created. \n${failedWorkTypes.join(", ")}`)
+    throw new Error(`The following worktype(s) failed to be created: ${failedWorkTypes.join(", ")}`)
   } 
   const workTypeSubTypeMap: IWorkTypeSubtypeMap[] = []
   workTypesData.forEach((row) => {
