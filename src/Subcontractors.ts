@@ -12,7 +12,7 @@ interface ISubcontractorRow {
     JobCostIDCode?: string,
     "Subcontractor Category"?: string,
     "Work Types": string,
-    Notes: string
+    Notes?: string
 }
 interface ISubcontractorDTO extends Omit<ISubcontractorRow, "Subcontractor Category" | "Work Types"> {
     ObjectID?: string
@@ -77,6 +77,7 @@ function CreateSubcontractors() {
                     OrganizationREF: orgRef,
                     WorkTypeCategoryREF: workTypeData.ObjectID
                 })
+                return
             } 
             const workSubtypeData = allWorkSubtypes.filter((subtype) => subtype.Name === workType)
             if(workSubtypeData.length > 0) {

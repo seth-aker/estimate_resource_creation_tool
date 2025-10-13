@@ -1,4 +1,4 @@
-interface TVendorRow {
+interface IVendorRow {
     Name: string, 
     Address1?: string,
     Address2?: string,
@@ -15,11 +15,18 @@ interface TVendorRow {
     Notes?: string,
     IsOwned?: boolean
 }
-
+interface IVendorDTO extends Omit<IVendorRow, "Vendor Category" | "Material Categories"> {
+    ObjectID?: string,
+    Category?: string
+}
+interface IVendorMaterialPayload {
+    OrganizationREF: string,
+    MaterialCategoryREF?: string,
+    MaterialSubcategoryREF?: string
+}
 function CreateVendors() {
-
     const {token, baseUrl} = authenticate()
-    const vendorData = getSpreadSheetData<TVendorRow>('Vendors');
+    const vendorData = getSpreadSheetData<IVendorRow>('Vendors');
     if (!vendorData || vendorData.length === 0) {
         Logger.log("No data to send!");
         SpreadsheetApp.getUi().alert('No data to send!');
@@ -39,32 +46,56 @@ function CreateVendors() {
             })
         }
     })
-    const existingMaterialCategories = getDBCategoryList('MaterialCategory', token, baseUrl)
-    const existingMaterialSubcategories = getDBSubcategoryList('MaterialSubcategory', token, baseUrl)
-    
-    const parentMaterialCategories: ICategoryItem[] = []
-    const subMaterialCategories: ISubcategoryItem[] = []
 
-    // For each unique category, search to see if it already exists in parent categories or subcategories.
-    // If not, we will create them.
-    materialCategories.forEach((category) => {
-        const parentCat = existingMaterialCategories.find((each) => each.Name === category)
-        if(parentCat) {
-            parentMaterialCategories.push(parentCat)
-            materialCategories.delete(category)
-        } else {
-            const subCat = existingMaterialSubcategories.find((each) => each.Name === category)
-            if(subCat) {
-                subMaterialCategories.push(subCat)
-                materialCategories.delete(category)
-            }
-        }   
-    })
-
-    const failedVendorCategories = _createVendorCategories(Array.from(vendorCategories), token, baseUrl)
+    const {failedVendorCategories} = _createVendorCategories(Array.from(vendorCategories), token, baseUrl)
     if(failedVendorCategories.length > 0) {
         throw new Error(`Script failed while creating the following vendor categories: ${failedVendorCategories.join(', ')}`)
     }
+
+    const {failedRows, createdVendors} = _createVendors(vendorData, token, baseUrl)
+    if(failedRows.length > 0) {
+        highlightRows(failedRows, 'red')
+        SpreadsheetApp.getUi().alert(`The following rows threw an error. Failed rows: ${failedRows.join(", ")}`)
+    }
+
+    const allMaterialCategories = getDBCategoryList('MaterialCategory', token, baseUrl)
+    const allMaterialSubcategories = getDBSubcategoryList('MaterialSubcategory', token, baseUrl)
+    
+    const parentMaterialCategories: IVendorMaterialPayload[] = []
+    const subMaterialCategories: IVendorMaterialPayload[] = []
+
+    vendorData.forEach((row) => {
+        if(!row['Material Categories']){
+            return
+        }
+        const vendorMaterialCategories = row['Material Categories'].split(',').map(each => each.trim())
+        const orgRef = createdVendors.find((each) => each.Name === row.Name)?.ObjectID
+        if(!orgRef) {
+            throw new Error("An unexpected error occured matching vendor rows to created vendors. This shouldn't have happened and is 100% a bug. Please report this to seth_aker@trimble.com")
+        }
+
+        vendorMaterialCategories.forEach((matCat) => {
+            const materialCategoryData = allMaterialCategories.find((each) => each.Name === matCat)
+            if(materialCategoryData) {
+                parentMaterialCategories.push({
+                    OrganizationREF: orgRef,
+                    MaterialCategoryREF: materialCategoryData.ObjectID
+                })
+                return
+            }
+            const materialSubcategoryData = allMaterialSubcategories.filter((subcat) => subcat.Name === matCat)
+            if(materialSubcategoryData.length > 0) {
+                subMaterialCategories.push(...materialSubcategoryData.map((each) => ({
+                    OrganizationREF: orgRef,
+                    MaterialSubcategoryREF: each.ObjectID
+                })))
+            }
+        })
+    })
+    const failedMaterialCategories = _addVendorMaterialCategories()
+    
+    SpreadsheetApp.getUi().alert("All rows were created successfully.")
+    
     // If there are material categories that don't already exist in the database, we have to create them before creating the vendors and attaching the categories.
     // This should be done first because the result of "createModal" cannot be awaited and we would have to retrieve all the vendor ids from the db in another call. Prevents another db call.
     // if(materialCategories.size > 0) {
@@ -83,12 +114,10 @@ function CreateVendors() {
 }
 function _createVendorCategories(vendorCategories: string[], token: string, baseUrl: string) {
     const url = baseUrl + `/Resource/Category/VendorCategory`
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-    }
+    const headers = createHeaders(token)
     const failedCategories: string[] = []
-
+    const categoriesToGet: string[] = []
+    const createdCategories: ICategoryItem[] = []
     const batchOptions = vendorCategories.map((categoryName) => {
         const payload = {
             Name: categoryName,
@@ -106,25 +135,31 @@ function _createVendorCategories(vendorCategories: string[], token: string, base
         const responses = UrlFetchApp.fetchAll(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
-            if(responseCode !== 201 && responseCode !== 200 && responseCode !== 409) {
-                Logger.log(`Category: "${vendorCategories[index]}" failed to create with status code ${responseCode}`)
+            if(responseCode >= 400 && responseCode !== 409) {
+                Logger.log(`Vendor Category: "${vendorCategories[index]}" failed to create with status code ${responseCode}. Error: ${response.getContentText()}`)
                 failedCategories.push(vendorCategories[index])
+            } else if (responseCode === 409 || responseCode === 200) {
+                Logger.log(`Vendor Category: ${vendorCategories[index]}" already existed in the database.`)
+                categoriesToGet.push(vendorCategories[index])
+            } else {
+                Logger.log(`Vendor Category: "${vendorCategories[index]}" successfully created`)
+                createdCategories.push(JSON.parse(response.getContentText()))
             }
         })
     } catch (err) {
-        Logger.log(err)
-        throw err
+        Logger.log(`An unexpected error occured creating vendor categories. Error: ${err}`)
+        throw new Error('An unexpected error occured creating vendor categories. Check the logs for more details.')
     }
-    return failedCategories
+    return {failedVendorCategories: failedCategories, createdVendorCategores: createdCategories}
 }
 
-function _createVendors(vendors: TVendorRow[], materialCategories: ICategoryItem[], materialSubcategories: ISubcategoryItem[], token: string, baseUrl: string) {
+function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
     const url = baseUrl + '/Resource/Organization/Vendor'
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-    }
+    const headers = createHeaders(token)
+
     const failedRows: number[] = [];
+    const vendorsToGet: {Name: string, City: string}[] = []
+    const createdVendors: IVendorDTO[] = []
     const batchOptions = vendors.map((vendor) => {
         const {['Vendor Category']: vendorCategory, ["Material Categories"]: vendorMaterials, ...restOfVendor} = vendor
         const payload = {
@@ -143,66 +178,42 @@ function _createVendors(vendors: TVendorRow[], materialCategories: ICategoryItem
         const responses = UrlFetchApp.fetchAll(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
-            if(responseCode === 200 || responseCode === 409) {
-                Logger.log(`Row ${index + 2}: Vendor with name "${vendors[index].Name}" and city "${vendors[index].City}" already exists`)
-                highlightRows([index], 'yellow')
-            }
             if(responseCode >= 400 && responseCode !== 409) {
                 Logger.log(`Row ${index + 2}: Failed with status code ${responseCode}`)
                 failedRows.push(index + 2)
+            } else if(responseCode === 200 || responseCode === 409) {
+                Logger.log(`Row ${index + 2}: Vendor with name "${vendors[index].Name}" and city "${vendors[index].City}" already exists`)
+                vendorsToGet.push({Name: vendors[index].Name, City: vendors[index].City})
             } else {
-                const createdVendorREF = JSON.parse(response.getContentText()).Item.ObjectID as string
-                const vendorMaterials = vendors[index]["Material Categories"]?.split(",").map(each => each.trim())
-                if(vendorMaterials && vendorMaterials.length > 0) {
-                    const parentCategories = materialCategories.filter(each => vendorMaterials.includes(each.Name))
-                    _addVendorMaterialCategories(createdVendorREF, parentCategories, false, token, baseUrl)
-                    const subCategories = materialSubcategories.filter(each => vendorMaterials.includes(each.Name))
-                    _addVendorMaterialCategories(createdVendorREF, subCategories, true, token, baseUrl)
-                }
+                Logger.log(`Vendor with name "${vendors[index].Name}" and city "${vendors[index].City}" successfully created`)
+                createdVendors.push(JSON.parse(response.getContentText()).Item)
             }
         })
+        return {failedRows, createdVendors: createdVendors}
     } catch (err) {
-        Logger.log(err)
-        throw err
-    }
-    if(failedRows.length > 0) {
-        highlightRows(failedRows, 'red')
-        SpreadsheetApp.getUi().alert(`The following rows threw an error. Failed rows: ${failedRows.join(", ")}`)
-    } else {
-        SpreadsheetApp.getUi().alert("All rows were created successfully.")
+        Logger.log(`An unexpected error occured creating vendors. Error: ${err}`)
+        throw new Error(`An unexpected error occured creating vendors. See logs for more details.`)
     }
 }
 
-function _addVendorMaterialCategories(vendorRef: string, categoriesToAdd: ICategoryItem[] | ISubcategoryItem[], isSubCat: boolean, token: string, baseUrl: string) {
-    if(categoriesToAdd.length === 0) {
+function _addVendorMaterialCategories(payloads: IVendorMaterialPayload[], isSubCat: boolean, token: string, baseUrl: string) {
+    if(payloads.length === 0) {
         return
     }
     const url = baseUrl + "/Resource/Organization" + isSubCat ? "/OrganizationMaterialSubcategory" : "/OrganizationMaterialCategory"
     const headers = createHeaders(token)
-    const payloads = categoriesToAdd.map((category) => {
-        return isSubCat ? {
-            materialSubcategoryREF: category.ObjectID!,
-            organizationREF: vendorRef
-        } : {
-            materialCategoryREF: category.ObjectID!,
-            organizationREF: vendorRef
-        }
-    })
     const batchOptions = payloads.map(payload => ({
         url,
         headers,
         method: "post" as const,
-        payload
+        payload: JSON.stringify(payload)
     }))
     // No need to try catch because errors will be caught in _createVendors
     const responses = UrlFetchApp.fetchAll(batchOptions)
-    const errorResponses = responses.filter(each => each.getResponseCode() >= 400 && each.getResponseCode() !== 409);
-    if(errorResponses.length > 0) {
-        throw new Error(`The following material categories failed to be added to vendor with ref "${vendorRef}": \n${errorResponses.map(errorResponse => {
-            const index = responses.findIndex(each => errorResponse === each)
-            return `{ Material: ${categoriesToAdd[index].Name}, ErrorCode: ${errorResponse.getResponseCode()} }`
-        }).join("\n")}`)
-    }
+    responses.forEach((response, index) => {
+        const responseCode = response.getResponseCode()
+        
+    })
 }
 
 
