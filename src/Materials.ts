@@ -14,7 +14,7 @@ interface IMaterialRow {
     QuantityRoundingIncrement?: number,
     TruckingCost?: number
 }
-interface IMaterialDTO extends Omit<IMaterialRow, 'UM System' & 'Unit of Measure'> {
+interface IMaterialDTO extends Omit<IMaterialRow, 'UM System' | 'Unit of Measure'> {
     ObjectID?: string
     EstimateREF: string
     ImperialUnitOfMeasure: string | number,
@@ -28,15 +28,15 @@ function AskForSystemUM() {
     SpreadsheetApp.getUi().showModalDialog(html.evaluate(), "Select System of Measure")
 }
 function CreateMaterials(systemOfMeasure: TSystemOfMeasure) {
-    authenticate()
+    const {token, baseUrl} = authenticate()
     const materialData = getSpreadSheetData<IMaterialRow>("Materials")
     if(!materialData || materialData.length === 0) {
-        Logger.log("No data to send!");
+        Logger.log("CreateMaterials() failed to run because there was no data to send.");
         SpreadsheetApp.getUi().alert('No data to send!');
         return;
     }
     const materialsToCreate = materialData.map((row) => createMaterialDTO(row, systemOfMeasure))
-    const {failedMaterials} = _createMaterials(materialsToCreate, TOKEN, BASE_URL)
+    const {failedMaterials} = _createMaterials(materialsToCreate, token, baseUrl)
 
     if(failedMaterials.length > 0) {
         highlightRows(failedMaterials, 'red')
@@ -67,6 +67,7 @@ function _createMaterials(materials: IMaterialDTO[], token: string, baseUrl: str
             } 
             else if(responseCode === 409 || responseCode === 200) {
                 Logger.log(`Material "${materials[index].Name}" already existed in the database.`)
+                failedMaterials.push(index + 2)
             }
             else {
                 Logger.log(`Material "${materials[index].Name}" successfully created.`)

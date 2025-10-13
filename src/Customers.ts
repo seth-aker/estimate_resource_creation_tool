@@ -1,4 +1,4 @@
-type TCustomer = {
+interface ICustomer {
     Name: string, 
     Address1?: string,
     Address2?: string,
@@ -18,7 +18,7 @@ type TCustomer = {
 function CreateCustomers() {
 
   const {token, baseUrl} = authenticate()
-  const customerData = getSpreadSheetData<TCustomer>('Customers')
+  const customerData = getSpreadSheetData<ICustomer>('Customers')
 
     // Check if no data and quit
   if (!customerData || customerData.length === 0) {
@@ -44,7 +44,7 @@ function CreateCustomers() {
     SpreadsheetApp.getUi().alert("All customers successfully created.")
   }
 }
-function _createCustomers(customerData: TCustomer[], token: string, baseUrl: string) {
+function _createCustomers(customerData: ICustomer[], token: string, baseUrl: string) {
    const headers = {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'

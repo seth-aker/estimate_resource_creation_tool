@@ -3,6 +3,7 @@ const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000";
 let TOKEN: string
 let BASE_URL: string
 
+type TOrganizationDTO = ISubcontractorDTO | ICustomer
 interface ICategoryItem {
   EstimateREF: string,
   Name: string,
@@ -25,6 +26,10 @@ interface ICategoryGetResponse {
 }
 interface ISubcategoryGetResponse {
   Items: ISubcategoryItem[],
+  Pagination: IPagination
+}
+interface IOrganizationGetResponse {
+  Items: ISubcontractorDTO[],
   Pagination: IPagination
 }
 type TSpreadsheetValues = Number | Boolean | Date | String
@@ -62,6 +67,29 @@ function createHeaders(token: string, additionalHeaders?: Record<string, string>
     }
 }
 
+function getOrganization(orgType: string, token: string, baseUrl: string, query: string = `?$filter=EstimateREF eq ${ESTIMATE_REF}`) {
+  const url = baseUrl + `/Resource/Organization/${orgType}${query}`
+  const headers = createHeaders(token)
+  const options = {
+    headers,
+    method: 'get' as const
+  }
+  const response = UrlFetchApp.fetch(url, options)
+  const responseCode = response.getResponseCode()
+  if(responseCode !== 200) {
+    throw new Error(`An error occured fetching organization type: "${orgType}" with code: ${responseCode}. Error: ${response.getContentText()}`)
+  }
+  const data: IOrganizationGetResponse = JSON.parse(response.getContentText())
+  const items: TOrganizationDTO[] = [...data.Items]
+
+  if(data.Pagination.NextPage) {
+    const qIndex = data.Pagination.NextPage.indexOf('?')
+    const query = data.Pagination.NextPage.substring(qIndex)
+    const nextPageItems = getOrganization(orgType, token, baseUrl, query)
+    items.push(...nextPageItems)
+  }
+  return items
+}
 /**
  * @param categoryName Name of the category, ie MaterialCategory or Worktype
  * @param token The access token

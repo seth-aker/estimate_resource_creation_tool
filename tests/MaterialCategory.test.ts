@@ -223,9 +223,7 @@ describe("MaterialCategory", () => {
         })  
     })
     describe('CreateMaterialCategories', () => {
-        gLib.authenticate = vi.fn()
-        gLib.TOKEN = 'mockToken',
-        gLib.BASE_URL = 'https://mock.com'
+        gLib.authenticate = vi.fn(() => ({token: mockToken, baseUrl: mockBaseUrl}))
         gLib.getSpreadSheetData = vi.fn(() => [
             {"Material Category": 'category1', "Material Subcategory": 'subcategory1'},
             {"Material Category": 'category1', "Material Subcategory": 'subcategory2'},

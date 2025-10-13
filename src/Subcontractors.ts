@@ -14,6 +14,10 @@ interface ISubcontractorRow {
     "Work Types": string,
     Notes: string
 }
+interface ISubcontractorDTO extends Omit<ISubcontractorRow, "Subcontractor Category" | "Work Types"> {
+    ObjectID?: string
+    Category?: string
+}
 interface ISubconWorkTypePayload {
     OrganizationREF: string,
     WorkTypeCategoryREF?: string
@@ -26,14 +30,6 @@ function CreateSubcontractors() {
         Logger.log("No data to send!");
         SpreadsheetApp.getUi().alert('No data to send!');
         return;
-  }
-  _createSubcontractors(subcontractorData, token, baseUrl)
-}
-
-function _createSubcontractors(subcontractorData: ISubcontractorRow[], token: string, baseUrl: string) {
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
     }
     const subcontractorCategories = new Set<string>()
     subcontractorData.forEach((row) => {
@@ -41,13 +37,80 @@ function _createSubcontractors(subcontractorData: ISubcontractorRow[], token: st
             subcontractorCategories.add(row['Subcontractor Category'])
         }
     })
-
-    const failedCategories = _createSubcontractorCategories(Array.from(subcontractorCategories), token, baseUrl)
+    // Create subcontractor categories before creating the subcontractors
+    const {failedCategories} = _createSubcontractorCategories(Array.from(subcontractorCategories), token, baseUrl)
     if(failedCategories.length > 0) {
         throw new Error(`Script failed while creating the following subcontractor categories: ${failedCategories.join(', ')}`)
     }
+    
+    // Create the subcontractors
+    const {failedRows, createdSubcontractors} = _createSubcontractors(subcontractorData, token, baseUrl)
+    if(failedRows.length > 0) {
+        highlightRows(failedRows, 'red')
+        throw new Error(`Some rows failed to be created. Failed Rows: ${failedRows.join(', ')}`)
+    }
+
+    // Setup payloads for adding work types and work subtypes to subcontractors
+    const subcontractorWorkTypePayloads: ISubconWorkTypePayload[] = []
+    const subcontractorWorkSubTypePayloads: ISubconWorkTypePayload[] = []
+    const allWorkTypes = getDBCategoryList("WorkType", token, baseUrl)
+    const allWorkSubtypes = getDBSubcategoryList("WorkSubtype", token, baseUrl)
+    // cycle through the rows and map the work types and sub types 
+    subcontractorData.forEach((row) => {
+        if(!row['Work Types']) {
+            return
+        }
+        // Data validation in google sheets allows multiple inputs, when the data is added, it is added with a ',' and space.
+        // Added whitespace trimming as well.
+        const subcontractorWorkTypes = row['Work Types'].split(",").map(each => each.trim())
+        const orgRef = createdSubcontractors.find((each) => each.Name === row.Name)?.ObjectID
+        if(!orgRef) {
+            throw new Error("An unexpected error occured matching subcontractor rows to created subcontractors. This shouldn't have happened and is 100% a bug. Please report this to seth_aker@trimble.com")
+        }
+        //For each of the work types in the list of worktypes.
+        subcontractorWorkTypes.forEach((workType) => {
+            // Get the object id from the list of all worktypes.
+            const workTypeData = allWorkTypes.find(each => each.Name === workType)
+            if(workTypeData) {
+                // Get the object id of 
+                subcontractorWorkTypePayloads.push({
+                    OrganizationREF: orgRef,
+                    WorkTypeCategoryREF: workTypeData.ObjectID
+                })
+            } 
+            const workSubtypeData = allWorkSubtypes.filter((subtype) => subtype.Name === workType)
+            if(workSubtypeData.length > 0) {
+                subcontractorWorkSubTypePayloads.push(...workSubtypeData.map(each => ({
+                    OrganizationREF: orgRef,
+                    WorkSubtypeCategoryREF: each.ObjectID
+                })))
+            }
+        })
+    })
+    const failedSubcontractorWorkTypes = _addSubcontractorWorkTypes(subcontractorWorkTypePayloads, token, baseUrl)
+    if(failedSubcontractorWorkTypes.length > 0) {
+        throw new Error(`An error occured adding the following work types to subcontractors: 
+            ${failedSubcontractorWorkTypes.map(each => {
+                return `Subcontractor: "${createdSubcontractors.find(sub => sub.ObjectID === each.OrganizationREF)}", Work Type: "${allWorkTypes.find(wt => wt.ObjectID === each.WorkTypeCategoryREF)}"`
+            }).join('\n')}`
+        )
+    }
+    const failedSubcontractorWorkSubTypes = _addSubcontractorSubWorkTypes(subcontractorWorkSubTypePayloads, token, baseUrl)
+    if(failedSubcontractorWorkSubTypes.length > 0) {
+        throw new Error(`An error occured adding the following work subtypes to subcontractors: 
+            ${failedSubcontractorWorkSubTypes.map(each => {
+                return `Subcontractor: "${createdSubcontractors.find(sub => sub.ObjectID === each.OrganizationREF)}", Work Subtype: "${allWorkSubtypes.find(st => st.ObjectID === each.WorkSubtypeCategoryREF)}`
+            }).join('\n')}`)
+    }
+    SpreadsheetApp.getUi().alert('All subcontractors created successfully!')
+}
+
+function _createSubcontractors(subcontractorData: ISubcontractorRow[], token: string, baseUrl: string) {
+    const headers = createHeaders(token)
     const failedRows: number[] = [];
-    subcontractorData.forEach((row, index) => {
+    const createdSubcontractors: ISubcontractorDTO[] = []
+    const subcontractorsToGet: string[] = []
+    const batchOptions = subcontractorData.map((row) => {
         // Pull out the columns that shouldn't be sent when creating a subcontractor. These will be sent later
         const {['Subcontractor Category']: subcontractorCategory, ['Work Types']: workTypes, ...restOfRow} = row
         const url = baseUrl + '/Resource/Organization/Subcontractor'
@@ -57,44 +120,46 @@ function _createSubcontractors(subcontractorData: ISubcontractorRow[], token: st
             Category: subcontractorCategory
         }
         const options = {
+            url,
             method: 'post' as const,
             headers,
             payload: JSON.stringify(payload)
         }
-        try {
-            const response = UrlFetchApp.fetch(url, options)
-            const responseCode = response.getResponseCode()
-            if(responseCode !== 201) {
-                throw new Error(`An error occured creating subcontractor at line ${index + 2}. Code: ${responseCode}`)
-            }
-            const data: ISubcontractorRow & {ObjectID: string} = JSON.parse(response.getContentText()).Item 
-            // Data validation in google sheets allows multiple inputs, when the data is added, it is added with a ',' and space.
-            // Added whitespace trimming as well.
-            const workTypeArray = workTypes.split(', ').map((eachString) => eachString.trim())
-            _addSubcontractorWorkTypes(workTypeArray, data.ObjectID, token, baseUrl)
-        } catch (err) {
-            Logger.log(err)
-            failedRows.push(index + 2)
-        }
+        return options
     })
-    if(failedRows.length > 0) {
-        highlightRows(failedRows, 'red')
-        SpreadsheetApp.getUi().alert(`Some rows failed to be created. Failed Rows: ${failedRows.join(', ')}`)
-    } else {
-        SpreadsheetApp.getUi().alert("All subcontractors successfully created.")
+    try {
+        const responses = UrlFetchApp.fetchAll(batchOptions)
+        responses.forEach((response, index) => {
+            const responseCode = response.getResponseCode()
+            if(responseCode >= 400 && responseCode !== 409) {
+                Logger.log(`An error with code ${responseCode} occured creating subcontractor at line ${index + 2}. Error: ${response.getContentText()} `)
+                failedRows.push(index + 2)
+            } else if(responseCode === 409 || responseCode === 200) {
+                Logger.log(`Subcontractor "${subcontractorData[index].Name}" already exists in the database.`)
+                subcontractorsToGet.push(subcontractorData[index].Name)
+            } else {
+                createdSubcontractors.push(JSON.parse(response.getContentText()).Item)
+                Logger.log(`Subcontractor "${subcontractorData[index].Name}" successfully created`)
+            }
+        })
+        if(subcontractorsToGet.length > 0) {
+            const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${subcontractorsToGet.map(each => `Name eq ${each}`).join(" or ")})`
+            const existingSubcontractors = getOrganization('Subcontractor', token, baseUrl, query) as ISubcontractorDTO[]
+            createdSubcontractors.push(...existingSubcontractors)
+        }
+        return {failedRows, createdSubcontractors}   
+    } catch (err) {
+        Logger.log(`Error creating subcontractors: ${err}`)
+        throw new Error('An unexpected error occured creating subcontractors. See logs for more details')
     }
-  
-
 }
 
 function _createSubcontractorCategories(categories: string[], token: string, baseUrl: string) {
     const url = baseUrl + `/Resource/Category/SubcontractorCategory`
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-    }
+    const headers = createHeaders(token)
     const failedCategories: string[] = []
-
+    const categoriesToGet: string[] = []
+    const createdCategories: ICategoryItem[] = []
     const batchOptions = categories.map((categoryName) => {
         const payload = {
             Name: categoryName,
@@ -112,165 +177,84 @@ function _createSubcontractorCategories(categories: string[], token: string, bas
         const responses = UrlFetchApp.fetchAll(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
-            if(responseCode !== 201 && responseCode !== 200 && responseCode !== 409) {
-                Logger.log(`Category: "${categories[index]}" failed to create with status code ${responseCode}`)
+            if(responseCode >= 400 && responseCode !== 409) {
+                Logger.log(`Subcontractor Category: "${categories[index]}" failed to create with status code ${responseCode}. Error: ${response.getContentText()}`)
                 failedCategories.push(categories[index])
+            } else if(responseCode === 200 || responseCode === 409) {
+                Logger.log(`Subcontractor Category: "${categories[index]}" already existed in the database.`)
+                categoriesToGet.push(categories[index])
+            } else {
+                Logger.log(`Subcontractor Category: "${categories[index]}" successfully created`)
+                createdCategories.push(JSON.parse(response.getContentText()).Item)
             }
         })
+        if(categoriesToGet.length > 0) {
+            const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${categoriesToGet.map((each) => `Name eq '${each}'`).join(' or ')})`
+            const existingCategories = getDBCategoryList('SubcontractorCategory', token, baseUrl, query)
+            createdCategories.push(...existingCategories)
+        }
     } catch (err) {
         Logger.log(err)
-        throw err
+        throw new Error("An unexpected error occured creating subcontractor categories. See logs for more detail.")
     }
-    return failedCategories
+    return {failedCategories, createdCategories}
 }
 
-function _addSubcontractorWorkTypes(workTypeNames: string[], subcontractorREF: string, token: string, baseUrl: string) {
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-    }
-    const {workTypes, workSubtypes} = _getWorkTypes(token, baseUrl)
-
-    const parentIDMap = new Map(workTypes.map((each) => [each.ObjectID, each.Name]))
-    const subtypeParentMap = new Map(workSubtypes.map(each => [each.Name, each.CategoryREF!])) // CategoryREF should never be undefined here because a subtype in B2W will always have a category ref
-     
-    // Filter out all of the subtypes from the workTypeNames array
-    const allSubtypeNames = workSubtypes.map(each => each.Name)
-    const subtypeNames = workTypeNames.filter((each) => allSubtypeNames.includes(each))
-
-    // Create a set that includes all of the required parents that need to exist in B2W in order to attach subtypes to the subcontractor
-    const requiredParentsForSubtypes = new Set<string>()
-    subtypeNames.forEach(subTypeName => {
-        // Get the parent ref for the subtype
-        const subtypeParentREF = subtypeParentMap.get(subTypeName)
-        if(!subtypeParentREF) {
-            throw new Error(`Could not find the parent ref for subtype: ${subTypeName}`)
-        }
-        // Get the parent name and add it to the required parents ref.
-        const requiredParent = parentIDMap.get(subtypeParentREF)
-        if(!requiredParent) {
-            throw new Error(`Could not find the parent name for subtype: ${subTypeName}`)
-        }
-        requiredParentsForSubtypes.add(requiredParent)
-    })
-    // If workTypeNames does not include a required parent work type, add it to the list.
-    requiredParentsForSubtypes.forEach((value) => {
-        if(!workTypeNames.includes(value)) {
-            workTypeNames.push(value)
-        }
-    })
-
-    // Prepare to send the requests.
-    const workTypeBatch: GoogleAppsScript.URL_Fetch.URLFetchRequest[] = []
-    const subtypeBatch: GoogleAppsScript.URL_Fetch.URLFetchRequest[] = []
-    
-    // Create Work types Batch
-    workTypeNames.forEach((workTypeName) => {
-        const workType = workTypes.find((each) => each.Name === workTypeName)
-        if(!workType) {
-            return
-        }
-        const url = baseUrl + '/Resource/Organization/OrganizationWorkType'
-        const payload: ISubconWorkTypePayload = {
-            OrganizationREF: subcontractorREF,
-            WorkTypeCategoryREF: workType.ObjectID
-        }
-        workTypeBatch.push({
-            url,
-            method: 'post' as const,
-            headers,
-            payload: JSON.stringify(payload)
-        })
-    })
-
-    // Create work subtype batch
-    workTypeNames.forEach((workTypeName) => {
-        const subtype = workSubtypes.find((each) => each.Name === workTypeName)
-        if(!subtype) {
-            return
-        }
-        const url = baseUrl + '/Resource/Organization/OrganizationWorkSubtype'
-        const payload: ISubconWorkTypePayload = {
-            OrganizationREF: subcontractorREF,
-            WorkSubtypeCategoryREF: subtype.ObjectID
-        }
-        subtypeBatch.push({
-            url,
-            method: 'post',
-            headers,
-            payload: JSON.stringify(payload)
-        })
-
-    })
+function _addSubcontractorWorkTypes(workTypePayloads: ISubconWorkTypePayload[], token: string, baseUrl: string) {
+    const headers = createHeaders(token)
+    const url = baseUrl + '/Resource/Organization/OrganizationWorkType'
+    const batchOptions = workTypePayloads.map((payload) => ({
+        url,
+        headers,
+        method: 'post' as const,
+        payload: JSON.stringify(payload)
+    }))
+    const failedSubcontractorWorkTypes: ISubconWorkTypePayload[] = []
     try {
-        const workTypeResponses = UrlFetchApp.fetchAll(workTypeBatch)
-        const workTypeErrors = workTypeResponses.filter((res) => res.getResponseCode() >= 400 && res.getResponseCode() !== 409) // Filter out all codes that are successes (200, 201)
-        if(workTypeErrors.length > 0) {
-            throw new Error(`The following worktypes returned with an error: \n${workTypeErrors.map((err) => {
-                // Responses returns in the same order as they are sent, so we can use the index of the responses object to match to the work type name.
-                const index = workTypeResponses.findIndex((each) => each === err) 
-                // BatchOptions was created in the same order as workTypeNames obj, so we can assume this index references the correct worktype (or subtype)
-                const worktype = workTypes.find(each => each.ObjectID === JSON.parse(workTypeBatch[index].payload as string).WorkTypeCategoryREF)?.Name
-                return `{Work Type: ${worktype}, Error code: ${err.getResponseCode()}}\n`
-            })}`)
-        }
-        
-        // Do the same as above for work subtypes
-        const subtypeResponses = UrlFetchApp.fetchAll(subtypeBatch)
-        const subtypeErrors = subtypeResponses.filter((res) => res.getResponseCode() >= 400)
-        if(subtypeErrors.length > 0) {
-            throw new Error(`The following work subtypes returned with an error: \n${subtypeErrors.map((err) => {
-                // Responses returns in the same order as they are sent, so we can use the index of the responses object to match to the work type name.
-                const index = subtypeResponses.findIndex((each) => each === err) 
-                // BatchOptions was created in the same order as workTypeNames obj, so we can assume this index references the correct worktype (or subtype)
-                return `{Work Subtype: ${workSubtypes[index].Name}, Error code: ${err.getResponseCode()}}\n`
-            })}`)
-        }
-    } catch (err) {
-        throw new Error(`An error occured adding subcontractor work types. Error Message: ${err}`)
-    }
-}
-
-function _getWorkTypes(token: string, baseUrl: string) {
-    const workTypeUrl = baseUrl + `/Resources/Category/Worktype?$filter=EstimateREF eq ${ESTIMATE_REF}`
-    const subtypeUrl = baseUrl + `/Resources/Subcategory/WorkSubtype?$filter=EstimateREF eq ${ESTIMATE_REF}`
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-    }
-    const workTypeOptions = {
-        url: workTypeUrl,
-        method: 'get' as const,
-        headers
-    }
-    const subtypeOptions = {
-        url: subtypeUrl, 
-        method: 'get' as const,
-        headers
-    }
-    try {
-        const responses = UrlFetchApp.fetchAll([workTypeOptions, subtypeOptions])
-        const responseCodes = responses.map((eachResponse) => eachResponse.getResponseCode())
-        const workTypes: ICategoryItem[] = []
-        const workSubtypes: ISubcategoryItem[] = []
-        responseCodes.forEach((code) => {
-            if(code !== 200) {
-                throw new Error(`An error occured fetching worktypes object IDs`)
+        const responses = UrlFetchApp.fetchAll(batchOptions)
+        responses.forEach((response, index) => {
+            const responseCode = response.getResponseCode()
+            if(responseCode >= 400 && responseCode !== 409) {
+                Logger.log(`An error occured adding work type with id: ${workTypePayloads[index].WorkTypeCategoryREF} to subcontractor with id ${workTypePayloads[index].OrganizationREF}. Code: ${responseCode}. Error: ${response.getContentText()}`)
+                failedSubcontractorWorkTypes.push(workTypePayloads[index])
+            } else if (responseCode === 409 || responseCode === 200) {
+                Logger.log(`Work type with id: ${workTypePayloads[index].WorkTypeCategoryREF} already added to organization with id: ${workTypePayloads[index].OrganizationREF}`)
+            } else {
+                Logger.log(`Work type with id: ${workTypePayloads[index].WorkTypeCategoryREF} added to organization with id: ${workTypePayloads[index].OrganizationREF}`)
             }
         })
-        const worktypeResponse: ICategoryGetResponse = JSON.parse(responses[0].getContentText())
-        const subtypeResponse: ISubcategoryGetResponse = JSON.parse(responses[1].getContentText())
-        worktypeResponse.Items.forEach((item) => {
-            workTypes.push(item)
-        })
-        subtypeResponse.Items.forEach((item) => {
-            workSubtypes.push(item)
-        })
-        return {workTypes, workSubtypes}
-        
-         
+        return failedSubcontractorWorkTypes
     } catch (err) {
-        Logger.log(err)
-        throw err
+        Logger.log(`An unexpected error occured adding work types to subcontractors. Error: ${err}`)
+        throw new Error(`An unexpected error occured adding work types to subcontractors. See logs for details.`)
+    }
+}
+function _addSubcontractorSubWorkTypes(workTypePayloads: ISubconWorkTypePayload[], token: string, baseUrl: string) {
+    const headers = createHeaders(token)
+    const url = baseUrl + '/Resource/Organization/OrganizationWorkSubType'
+    const batchOptions = workTypePayloads.map((payload) => ({
+        url,
+        headers,
+        method: 'post' as const,
+        payload: JSON.stringify(payload)
+    }))
+    const failedSubcontractorWorkSubTypes: ISubconWorkTypePayload[] = []
+    try {
+        const responses = UrlFetchApp.fetchAll(batchOptions)
+        responses.forEach((response, index) => {
+            const responseCode = response.getResponseCode()
+            if(responseCode >= 400 && responseCode !== 409) {
+                Logger.log(`An error occured adding work subtype with id: ${workTypePayloads[index].WorkSubtypeCategoryREF} to subcontractor with id ${workTypePayloads[index].OrganizationREF}. Code: ${responseCode}. Error: ${response.getContentText()}`)
+                failedSubcontractorWorkSubTypes.push(workTypePayloads[index])
+            } else if (responseCode === 409 || responseCode === 200) {
+                Logger.log(`Work subtype with id: ${workTypePayloads[index].WorkSubtypeCategoryREF} already added to organization with id: ${workTypePayloads[index].OrganizationREF}`)
+            } else {
+                Logger.log(`Work subtype with id: ${workTypePayloads[index].WorkSubtypeCategoryREF} successfully added to organization with id: ${workTypePayloads[index].OrganizationREF}`)
+            }
+        })
+        return failedSubcontractorWorkSubTypes
+    } catch (err) {
+        Logger.log(`An unexpected error occured adding work types to subcontractors. Error: ${err}`)
+        throw new Error(`An unexpected error occured adding work types to subcontractors. See logs for details.`)
     }
 }

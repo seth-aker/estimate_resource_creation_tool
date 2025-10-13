@@ -8,7 +8,7 @@ interface IMaterialCategoryRow {
 }
 
 function CreateMaterialCategories() {
-    authenticate();
+    const {token, baseUrl} = authenticate();
     const materialData = getSpreadSheetData<IMaterialCategoryRow>('Material Categories')
     if(!materialData || materialData.length === 0) {
         Logger.log("No data to send!");
@@ -18,7 +18,7 @@ function CreateMaterialCategories() {
     const parentCategories = materialData.map((row) => row["Material Category"].toString())
     const uniqueCategories = Array.from(new Set(parentCategories))
    
-    const {failedCategories, createdCategories} = _createMaterialCategories(uniqueCategories, TOKEN, BASE_URL)
+    const {failedCategories, createdCategories} = _createMaterialCategories(uniqueCategories, token, baseUrl)
     if(failedCategories.length > 0) {
         throw new Error(`The following material categories failed to be created: "${failedCategories.join(`", "`)}"`)
     }
@@ -37,7 +37,7 @@ function CreateMaterialCategories() {
             parentSubcategoryMap.push(map)
         }
     }))
-    const {failedSubcategories} = _createMaterialSubcategories(parentSubcategoryMap, TOKEN, BASE_URL)
+    const {failedSubcategories} = _createMaterialSubcategories(parentSubcategoryMap, token, baseUrl)
     if(failedSubcategories.length > 0) {
         throw new Error(`The following material subcategories failed to be created: "${failedSubcategories.join('", "')}"`)
     } else {
