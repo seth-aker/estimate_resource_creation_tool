@@ -1,6 +1,6 @@
 import gas from 'gas-local';
 import { vi, beforeEach, expect, describe, it, beforeAll } from 'vitest'
-import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockUi } from './mocks';
+import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockUi, mockPropertiesService, mockUserProperties } from './mocks';
 
 const mockGetDBSubcategoryList = vi.fn()
 const mockGetDBCategoryList = vi.fn()
@@ -11,6 +11,7 @@ const mocks = {
   SpreadsheetApp: mockSpreadsheetApp,
   UrlFetchApp: mockUrlFetchApp,
   Logger: mockLogger,
+  PropertiesService: mockPropertiesService
   // __proto__: gas.globalMockDefaults
 }
 
@@ -23,7 +24,10 @@ describe('WorkTypes', () => {
   const mockToken = 'mock-token'
   const expectedHeader = {
         'Authorization': `Bearer ${mockToken}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'ClientID': mockUserProperties.clientID,
+        'ClientSecret': mockUserProperties.clientSecret,
+        "ConnectionString": `Server=${mockUserProperties.serverName};Database=${mockUserProperties.dbName};MultipleActiveResultSets=true;Integrated Security=SSPI;`
   }
   beforeEach(() => {
     vi.resetAllMocks()
@@ -50,7 +54,8 @@ describe('WorkTypes', () => {
           url: mockBaseUrl + "/Resource/Subcategory/WorkSubType",
           method: 'post' as const,
           headers: expectedHeader,
-          payload: JSON.stringify(payload)
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true
         }
       })
       const mockReturnValues = [
@@ -91,7 +96,8 @@ describe('WorkTypes', () => {
           url: mockBaseUrl + "/Resource/Subcategory/WorkSubType",
           method: 'post' as const,
           headers: expectedHeader,
-          payload: JSON.stringify(payload)
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true
         }
       })
       const mockReturnValues = [
@@ -141,7 +147,8 @@ describe('WorkTypes', () => {
           url: mockBaseUrl + "/Resource/Subcategory/WorkSubType",
           method: 'post' as const,
           headers: expectedHeader,
-          payload: JSON.stringify(payload)
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true
         }
       })
       const mockReturnValues = [
@@ -174,7 +181,8 @@ describe('WorkTypes', () => {
           url: mockBaseUrl + '/Resource/Category/WorkType',
           method: 'post' as const,
           headers: expectedHeader,
-          payload: JSON.stringify(payload)
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true
         }
       })
       const mockCreatedWorkTypes = [
@@ -227,7 +235,8 @@ describe('WorkTypes', () => {
           url: mockBaseUrl + '/Resource/Category/WorkType',
           method: 'post' as const,
           headers: expectedHeader,
-          payload: JSON.stringify(payload)
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true
         }
       })
       const mockReturnValues = expectedBatchOptions.map(_ => {
@@ -257,7 +266,8 @@ describe('WorkTypes', () => {
           url: mockBaseUrl + '/Resource/Category/WorkType',
           method: 'post' as const,
           headers: expectedHeader,
-          payload: JSON.stringify(payload)
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true
         }
       })
       const mockReturnValues = [

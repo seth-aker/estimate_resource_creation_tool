@@ -1,11 +1,12 @@
 import gas from 'gas-local';
 import { vi, beforeEach, expect, describe, it } from 'vitest'
-import { mockSpreadsheetApp, mockUrlFetchApp, mockUi, mockLogger, mockAuthenticate, mockRange, mockSheet } from './mocks';
+import { mockSpreadsheetApp, mockUrlFetchApp, mockUi, mockLogger, mockAuthenticate, mockRange, mockSheet, mockPropertiesService } from './mocks';
 
 const mocks = {
   SpreadsheetApp: mockSpreadsheetApp,
   UrlFetchApp: mockUrlFetchApp,
   Logger: mockLogger,
+  PropertiesService: mockPropertiesService
   // __proto__: gas.globalMockDefaults
 }
 
@@ -51,17 +52,19 @@ describe('CreateJCIDS', () => {
       {Description: 'Dummy data2', Code: 'moreDummyData2'}
     ])
     mockUrlFetchApp.fetchAll.mockReturnValue([
-      { getResponseCode: () => 400 },
+      { getResponseCode: () => 400, getContentText: () => 'Error' },
       { getResponseCode: () => 201 }
     ])
     glib.CreateJCIDS()
 
     expect(mocks.Logger.log).toHaveBeenCalledTimes(2)
-    expect(mocks.Logger.log).nthCalledWith(1, 'Row 2: Failed with status code 400')
+    expect(mocks.Logger.log).nthCalledWith(1, 'Row 2: Failed with status code 400. Error: Error')
     expect(mocks.Logger.log).nthCalledWith(2, 'Row 3: Successfully created')
     expect(mockSheet.getRange).toHaveBeenCalledWith(2, 1,1, undefined)
-    expect(mockRange.setBackground).toHaveBeenCalledWith('yellow')
-    expect(mockUi.alert).toHaveBeenCalledWith("Some records failed to create. Failed rows: 2")
+    expect(mockRange.setBackground).toHaveBeenCalledWith('red')
+    expect(mockUi.alert).toHaveBeenCalledWith(`Some records failed to create or already existed in the database.
+      Pre-existingRows: []
+      Failed rows: [2]`)
   })
 })
   

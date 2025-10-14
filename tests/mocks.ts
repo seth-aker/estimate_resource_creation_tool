@@ -28,7 +28,24 @@ export const mockUrlFetchApp = {
 export const mockLogger = {
   log: vi.fn()
 }
-
+export const mockUserProperties = {
+  baseUrl: 'https://mock.com',
+  clientID: 'mockClientID',
+  clientSecret: 'mockClientSecret',
+  userName: 'mockUserName',
+  password: 'mockPassword',
+  serverName: 'mockServerName',
+  dbName: 'mockDbName'
+}
+export const mockPropertiesObject = {
+  getProperties: vi.fn(() => mockUserProperties),
+  getProperty: vi.fn((prop: keyof typeof mockUserProperties) => mockUserProperties[prop]),
+  setProperties: vi.fn()
+}
+export const mockPropertiesService = {
+  getUserProperties: vi.fn(() => mockPropertiesObject),
+  getScriptProperties: vi.fn(() => mockPropertiesObject)
+}
 export const mockAuthenticate = vi.fn(() => ({token: 'mockToken', baseUrl: 'mockBaseUrl.com'}))
 
 // mockSpreadsheetApp.getActiveSpreadsheet.mockReturnValue(mockSpreadsheetApp);

@@ -3,10 +3,26 @@ type TUserVariables = {
   clientID: string,
   clientSecret: string,
   userName: string,
-  password: string
+  password: string,
+  serverName: string,
+  dbName: string
+}
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('API Properties')
+    .addItem('Set API Properties', 'requestUserProperties')
+    .addItem('Clear API Properties', 'clearUserProperties')
+    .addToUi()
+}
+function requestUserProperties() {
+  const html = HtmlService.createHtmlOutputFromFile('SetUserProperties')
+  SpreadsheetApp.getUi().showModalDialog(html, "Set Environment Variables")
+}
+function clearUserProperties() {
+  PropertiesService.getUserProperties().deleteAllProperties()
+  SpreadsheetApp.getUi().alert("Database properties successfully deleted")
 }
 function setUserVariables(vars: TUserVariables) {
-  console.log(vars)
   try {
     PropertiesService.getUserProperties().setProperties(vars)
   } catch (err) {
@@ -15,12 +31,12 @@ function setUserVariables(vars: TUserVariables) {
   }
 }
 function _getUserVariables() {
-  const props = PropertiesService.getScriptProperties().getProperties()
+  const props = PropertiesService.getUserProperties().getProperties()
   const baseUrl = props['baseUrl']
   const clientID = props['clientID']
   const clientSecret = props['clientSecret']
   const userName = props['userName']
-  const password = props['passwords']
+  const password = props['password']
 
   if(!baseUrl) {
     SpreadsheetApp.getUi().alert(`BaseUrl required!`)
@@ -80,7 +96,6 @@ function _getSpreadsheetVars() {
     SpreadsheetApp.getUi().alert('Password required!')
     return
   }
-  BASE_URL = baseUrl
   return {
     baseUrl,
     clientID: clientID,
@@ -100,7 +115,7 @@ function _getToken(baseUrl: string, credentials: Credentials) {
   const tokenHeader = {
     clientID: credentials.clientID,
     clientSecret: credentials.clientSecret,
-    userName: credentials.userName,
+    userName: `viewpoint\\${credentials.userName}`,
     password: credentials.password
   }
   const options = {
@@ -114,7 +129,6 @@ function _getToken(baseUrl: string, credentials: Credentials) {
       throw new Error(`An error occured authenticating with the Estimate API. Error code: ${responseCode}`)
     }
     const token = JSON.parse(response.getContentText()).AccessToken;
-    TOKEN = token
     return token as string
   } catch (err) {
     Logger.log(err)
@@ -128,9 +142,6 @@ function _getToken(baseUrl: string, credentials: Credentials) {
  */
 function authenticate() {
   // use to get bearer token
-  if(TOKEN && BASE_URL) {
-    return {token: TOKEN, baseUrl: BASE_URL}
-  }
   const spreadsheetVars = _getUserVariables()
   if(!spreadsheetVars) throw new Error("Missing API_Information!")
   const token = _getToken(spreadsheetVars.baseUrl, spreadsheetVars)

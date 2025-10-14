@@ -1,13 +1,14 @@
 import { vi, describe, it, beforeEach, expect} from 'vitest'
 import gas from 'gas-local'
-import { mockLogger, mockSpreadsheetApp, mockUi, mockUrlFetchApp } from './mocks'
+import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUserProperties } from './mocks'
 const mockGetDBSubcategoryList = vi.fn()
 const mockGetDBCategoryList = vi.fn()
 const mockGetSpreadSheetData = vi.fn()
 const mocks = {
     SpreadsheetApp: mockSpreadsheetApp,
     UrlFetchApp: mockUrlFetchApp,
-    Logger: mockLogger
+    Logger: mockLogger,
+    PropertiesService: mockPropertiesService
 }
 const gLib = gas.require('./dist', mocks)
 gLib.getDBSubcategoryList = mockGetDBSubcategoryList
@@ -19,7 +20,10 @@ describe("MaterialCategory", () => {
     const mockToken = 'mock-token'
     const mockHeader = {
         'Authorization': `Bearer ${mockToken}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        "ConnectionString": `Server=${mockUserProperties.serverName};Database=${mockUserProperties.dbName};MultipleActiveResultSets=true;Integrated Security=SSPI;`,
+        'ClientID': mockUserProperties.clientID,
+        'ClientSecret': mockUserProperties.clientSecret
     }
     beforeEach(() => {
         vi.resetAllMocks()
@@ -51,7 +55,9 @@ describe("MaterialCategory", () => {
                     EstimateREF: ESTIMATE_REF,
                     Name: each.subcategory,
                     CategoryREF: each.parentRef
-                })
+                }),
+                muteHttpExceptions: true
+
             }))
 
             const {failedSubcategories, createdSubcategories} = gLib._createMaterialSubcategories(mockSubcatParentMap, mockToken, mockBaseUrl)
@@ -83,7 +89,9 @@ describe("MaterialCategory", () => {
                     EstimateREF: ESTIMATE_REF,
                     Name: each.subcategory,
                     CategoryREF: each.parentRef
-                })
+                }),
+                muteHttpExceptions: true
+
             }))
             mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses)
             const expectedFailedSubcats = ['mockSubcat1', 'mockSubcat2', 'mockSubcat3']
@@ -150,7 +158,8 @@ describe("MaterialCategory", () => {
                 payload: JSON.stringify({
                     Name: each,
                     EstimateREF: ESTIMATE_REF
-                })
+                }),
+                muteHttpExceptions: true
             }))
 
             const {failedCategories, createdCategories} = gLib._createMaterialCategories(mockCategories, mockToken, mockBaseUrl)
@@ -182,7 +191,8 @@ describe("MaterialCategory", () => {
                 payload: JSON.stringify({
                     Name: each,
                     EstimateREF: ESTIMATE_REF
-                })
+                }),
+                muteHttpExceptions: true
             }))
             mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses)
             const expectedFailedSubcats = ['category1', 'category2', 'category3']

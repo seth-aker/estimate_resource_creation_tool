@@ -1,11 +1,12 @@
 import { vi, describe, it, beforeEach, expect, beforeAll} from 'vitest'
 import gas from 'gas-local'
-import { mockLogger, mockSpreadsheetApp, mockUi, mockUrlFetchApp } from './mocks'
+import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUserProperties } from './mocks'
 
 const mocks = {
     SpreadsheetApp: mockSpreadsheetApp,
     UrlFetchApp: mockUrlFetchApp,
-    Logger: mockLogger
+    Logger: mockLogger,
+    PropertiesService: mockPropertiesService
 }
 const gLib = gas.require('./dist', mocks)
 const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000"
@@ -14,6 +15,9 @@ const mockToken = 'mockToken'
 const mockHeader = {
   'Authorization': `Bearer ${mockToken}`,
   'Content-Type': 'application/json',
+  'ClientID': mockUserProperties.clientID,
+  'ClientSecret': mockUserProperties.clientSecret,
+  "ConnectionString": `Server=${mockUserProperties.serverName};Database=${mockUserProperties.dbName};MultipleActiveResultSets=true;Integrated Security=SSPI;`
 }
 describe('Materials', () => {
   beforeEach(() => {
@@ -186,7 +190,8 @@ describe('Materials', () => {
         url: `${mockBaseUrl}/Resource/Material`,
         headers: mockHeader,
         method: 'post' as const,
-        payload: JSON.stringify(each)
+        payload: JSON.stringify(each),
+        muteHttpExceptions: true
       }))
       mockUrlFetchApp.fetchAll.mockReturnValue([
         {
@@ -210,7 +215,8 @@ describe('Materials', () => {
         url: `${mockBaseUrl}/Resource/Material`,
         headers: mockHeader,
         method: 'post' as const,
-        payload: JSON.stringify(each)
+        payload: JSON.stringify(each),
+        muteHttpExceptions: true
       }))
       mockUrlFetchApp.fetchAll.mockReturnValue([
         {
@@ -232,7 +238,8 @@ describe('Materials', () => {
         url: `${mockBaseUrl}/Resource/Material`,
         headers: mockHeader,
         method: 'post' as const,
-        payload: JSON.stringify(each)
+        payload: JSON.stringify(each),
+        muteHttpExceptions: true
       }))
       const mockReturnValue = {...mockMaterialDTO, ObjectID: 'mockObjectID'}
       const mockReturnValue2 = {...mockMaterialDTO2, ObjectID: 'mockObjectID2'}

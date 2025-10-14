@@ -65,7 +65,7 @@ function CreateSubcontractors() {
         const subcontractorWorkTypes = row['Work Types'].split(",").map(each => each.trim())
         const orgRef = createdSubcontractors.find((each) => each.Name === row.Name)?.ObjectID
         if(!orgRef) {
-            throw new Error("An unexpected error occured matching subcontractor rows to created subcontractors. This shouldn't have happened and is 100% a bug. Please report this to seth_aker@trimble.com")
+            throw new Error("An unexpected error occured matching subcontractor rows to created subcontractors. This shouldn't have happened and is most likely a bug. Please report this to seth_aker@trimble.com")
         }
         //For each of the work types in the list of worktypes.
         subcontractorWorkTypes.forEach((workType) => {
@@ -81,10 +81,21 @@ function CreateSubcontractors() {
             } 
             const workSubtypeData = allWorkSubtypes.filter((subtype) => subtype.Name === workType)
             if(workSubtypeData.length > 0) {
+                workSubtypeData.forEach((subtype) => {
+                    // Check to make sure the parent worktype is being added. If it doesn't exist, add it here
+                    if(!subcontractorWorkTypePayloads.find((payload) => payload.OrganizationREF === orgRef && payload.WorkTypeCategoryREF === subtype.CategoryREF)) {
+                        subcontractorWorkTypePayloads.push({
+                            OrganizationREF: orgRef,
+                            WorkTypeCategoryREF: subtype.CategoryREF
+                        })
+                    }
+                })
+                // Then add the subtypes
                 subcontractorWorkSubTypePayloads.push(...workSubtypeData.map(each => ({
                     OrganizationREF: orgRef,
                     WorkSubtypeCategoryREF: each.ObjectID
                 })))
+
             }
         })
     })
@@ -124,7 +135,8 @@ function _createSubcontractors(subcontractorData: ISubcontractorRow[], token: st
             url,
             method: 'post' as const,
             headers,
-            payload: JSON.stringify(payload)
+            payload: JSON.stringify(payload),
+            muteHttpExceptions: true
         }
         return options
     })
@@ -144,7 +156,7 @@ function _createSubcontractors(subcontractorData: ISubcontractorRow[], token: st
             }
         })
         if(subcontractorsToGet.length > 0) {
-            const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${subcontractorsToGet.map(each => `Name eq ${each}`).join(" or ")})`
+            const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${subcontractorsToGet.map(each => `Name eq '${each}'`).join(" or ")})`
             const existingSubcontractors = getOrganization('Subcontractor', token, baseUrl, query) as ISubcontractorDTO[]
             createdSubcontractors.push(...existingSubcontractors)
         }
@@ -170,7 +182,8 @@ function _createSubcontractorCategories(categories: string[], token: string, bas
             url,
             method: 'post' as const,
             headers,
-            payload: JSON.stringify(payload)
+            payload: JSON.stringify(payload),
+            muteHttpExceptions: true
         }
         return options
     }) 
@@ -212,7 +225,8 @@ function _addSubcontractorWorkTypes(workTypePayloads: ISubconWorkTypePayload[], 
         url,
         headers,
         method: 'post' as const,
-        payload: JSON.stringify(payload)
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
     }))
     try {
         const responses = UrlFetchApp.fetchAll(batchOptions)
@@ -240,7 +254,8 @@ function _addSubcontractorSubWorkTypes(workTypePayloads: ISubconWorkTypePayload[
         url,
         headers,
         method: 'post' as const,
-        payload: JSON.stringify(payload)
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
     }))
     const failedSubcontractorWorkSubTypes: ISubconWorkTypePayload[] = []
     try {

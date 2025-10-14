@@ -62,7 +62,8 @@ function _createWorkTypes(workTypes: string[], token: string, baseUrl: string) {
       url,
       method: 'post' as const,
       headers,
-      payload: JSON.stringify(payload)
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
     }
     return options
   })
@@ -120,7 +121,8 @@ function _createWorkSubtypes(workTypeSubTypeMap: IWorkTypeSubtypeMap[], token: s
       url,
       method: 'post' as const,
       headers,
-      payload: JSON.stringify(payload)
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
     }
     return options
   })

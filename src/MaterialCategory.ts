@@ -63,7 +63,8 @@ function _createMaterialCategories(materialCategories: string[], token: string, 
             url,
             method: 'post' as const,
             headers,
-            payload: JSON.stringify(payload)
+            payload: JSON.stringify(payload),
+            muteHttpExceptions: true
         }
         return options
     }) 
@@ -109,14 +110,15 @@ function _createMaterialSubcategories(subcategoryParentMap: IParentSubcategoryMa
         payloads.push({
             EstimateREF: ESTIMATE_REF,
             Name: each.subcategory,
-            CategoryREF: each.parentRef
+            CategoryREF: each.parentRef,
         })
     })
     const batchOptions = payloads.map(payload => ({
         url,
         headers,
         method: 'post' as const,
-        payload: JSON.stringify(payload)
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
     }))
 
     try {

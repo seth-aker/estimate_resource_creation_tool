@@ -1,7 +1,5 @@
 // Work types require a EstimateREF to be sent with the post, use this as a dummy ref
 const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000";
-let TOKEN: string
-let BASE_URL: string
 
 type TOrganizationDTO = ISubcontractorDTO | ICustomer
 interface ICategoryItem {
@@ -62,17 +60,21 @@ function getSpreadSheetData<T>(spreadsheetName: string): T[] {
 function createHeaders(token: string, additionalHeaders?: Record<string, string>) {
     const baseUrl = PropertiesService.getUserProperties().getProperty('baseUrl')
     const userName = PropertiesService.getUserProperties().getProperty('userName')
-    if(!baseUrl || !userName) {
+    const serverName = PropertiesService.getUserProperties().getProperty('serverName')
+    const clientID = PropertiesService.getUserProperties().getProperty('clientID')
+    const clientSecret = PropertiesService.getUserProperties().getProperty('clientSecret')
+    const dbName = PropertiesService.getUserProperties().getProperty('dbName')
+    if(!baseUrl || !userName || !serverName || !dbName || !clientID || !clientSecret) {
       throw new Error('Missing required user properties')
     }
-    const databaseCode = userName.substring(userName.lastIndexOf('.') + 1)
-    const databaseName = baseUrl.substring(baseUrl.lastIndexOf('/') + 1)
-    const httpsLength = 8;
-    const serverName = baseUrl.substring(httpsLength, ) //b2w-eus10
+    const connectionString = `Server=${serverName};Database=${dbName};MultipleActiveResultSets=true;Integrated Security=SSPI;`
+    
     return {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        // 'ConnectionString': 
+        'ConnectionString': connectionString,
+        'ClientID': clientID,
+        'ClientSecret': clientSecret,
         ...additionalHeaders
     }
 }
@@ -82,7 +84,8 @@ function getOrganization(orgType: string, token: string, baseUrl: string, query:
   const headers = createHeaders(token)
   const options = {
     headers,
-    method: 'get' as const
+    method: 'get' as const,
+    muteHttpExceptions: true
   }
   const response = UrlFetchApp.fetch(url, options)
   const responseCode = response.getResponseCode()
@@ -112,13 +115,14 @@ function getDBCategoryList(categoryName: string, token: string, baseUrl: string,
     const headers = createHeaders(token)
     const options = {
       headers,
-      method: 'get' as const
+      method: 'get' as const,
+      muteHttpExceptions: true
     }
     try {
       const response = UrlFetchApp.fetch(url, options)
       const responseCode = response.getResponseCode()
       if(responseCode !== 200) {
-        throw new Error(`An error occured fetching category: "${categoryName}" Code: ${responseCode}`)
+        throw new Error(`An error occured fetching category: "${categoryName}" Code: ${responseCode}. Error: ${response.getContentText()}`)
       }
       const data: ICategoryGetResponse = JSON.parse(response.getContentText())
       const items: ICategoryItem[] = [...data.Items]
@@ -132,6 +136,7 @@ function getDBCategoryList(categoryName: string, token: string, baseUrl: string,
       }
       return items
     } catch (err) {
+      Logger.log(err)
       throw err
     }
 }
@@ -140,13 +145,14 @@ function getDBSubcategoryList(subcategoryName: string, token: string, baseUrl: s
     const headers = createHeaders(token)
     const options = {
       headers,
-      method: 'get' as const
+      method: 'get' as const,
+      muteHttpExceptions: true
     }
     try {
       const response = UrlFetchApp.fetch(url, options)
       const responseCode = response.getResponseCode()
       if(responseCode !== 200) {
-        throw new Error(`An error occured fetching category: "${subcategoryName}" Code: ${responseCode}`)
+        throw new Error(`An error occured fetching subcategory: "${subcategoryName}" Code: ${responseCode}`)
       }
       const data: ISubcategoryGetResponse = JSON.parse(response.getContentText())
       const items: ISubcategoryItem[] = [...data.Items]
@@ -160,6 +166,7 @@ function getDBSubcategoryList(subcategoryName: string, token: string, baseUrl: s
       }
       return items
     } catch (err) {
+      Logger.log(err)
       throw err
     }
 }

@@ -14,19 +14,17 @@ function CreateJCIDS() {
     SpreadsheetApp.getUi().alert('No data to send!');
     return;
   }
-  const headers = {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }
+  const headers = createHeaders(token)
   const url = baseUrl + '/Resource/JobCostID'
   const failedRows: number[] = [];
-
+  const existingRows: number[] = []
   const batchOptions = data.map((row) => {
     const options = {
       url,
       method: 'post' as const,
       headers,
-      payload: JSON.stringify(row)
+      payload: JSON.stringify(row),
+      muteHttpExceptions: true
     }
     return options
   })
@@ -37,8 +35,11 @@ function CreateJCIDS() {
       const responseCode = response.getResponseCode()
       if(responseCode < 400) {
         Logger.log(`Row ${index + 2}: Successfully created`);
+      } else if (responseCode === 409 || responseCode === 200) {
+        Logger.log(`Row ${index + 2}: Already exists in the database.`)
+        existingRows.push(index + 2)
       } else {
-        Logger.log(`Row ${index + 2}: Failed with status code ${responseCode}`);
+        Logger.log(`Row ${index + 2}: Failed with status code ${responseCode}. Error: ${response.getContentText()}`);
         failedRows.push(index + 2) // Adding failed row to the list (i + 2 because of header row)
       }
     })
@@ -48,15 +49,20 @@ function CreateJCIDS() {
   }
 
   // Show alerts based on the results
-  if (failedRows.length === 0) {
+  if (failedRows.length === 0 && existingRows.length === 0) {
     SpreadsheetApp.getUi().alert('All records were created successfully!');
   } else {
-    // Set the background of the failed rows to yellow
+    // Set the background of the failed rows to red
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet()
-    failedRows.forEach((row) => {
-        sheet.getRange(row, 1,1, sheet.getLastColumn()).setBackground('yellow')
+    existingRows.forEach((row) => {
+      sheet.getRange(row, 1,1,sheet.getLastColumn()).setBackground('yellow')
     })
-    SpreadsheetApp.getUi().alert('Some records failed to create. Failed rows: ' + failedRows.join(', '));
+    failedRows.forEach((row) => {
+        sheet.getRange(row, 1,1, sheet.getLastColumn()).setBackground('red')
+    })
+    SpreadsheetApp.getUi().alert(`Some records failed to create or already existed in the database.
+      Pre-existingRows: [${existingRows.join(', ')}]
+      Failed rows: [${failedRows.join(', ')}]`);
   }
 }
 

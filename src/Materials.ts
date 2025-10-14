@@ -24,8 +24,8 @@ interface IMaterialDTO extends Omit<IMaterialRow, 'UM System' | 'Unit of Measure
     QuantityRoundingIncrementSystemOfMeasure?: TSystemOfMeasure
 }
 function AskForSystemUM() {
-    const html = HtmlService.createTemplateFromFile('MaterialSettingsModal')
-    SpreadsheetApp.getUi().showModalDialog(html.evaluate(), "Select System of Measure")
+    const html = HtmlService.createHtmlOutputFromFile('MaterialSettingsModal')
+    SpreadsheetApp.getUi().showModalDialog(html, "Select System of Measure")
 }
 function CreateMaterials(systemOfMeasure: TSystemOfMeasure) {
     const {token, baseUrl} = authenticate()
@@ -53,7 +53,8 @@ function _createMaterials(materials: IMaterialDTO[], token: string, baseUrl: str
         url,
         headers,
         method: 'post' as const,
-        payload: JSON.stringify(material)
+        payload: JSON.stringify(material),
+        muteHttpExceptions: true
     }))
     const failedMaterials: number[] = [] 
     const createdMaterials: IMaterialDTO[] = []

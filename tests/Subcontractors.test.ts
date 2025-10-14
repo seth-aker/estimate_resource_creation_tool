@@ -1,6 +1,6 @@
 import { vi, describe, it, beforeEach, expect, beforeAll} from 'vitest'
 import gas from 'gas-local'
-import { mockLogger, mockSpreadsheetApp, mockUi, mockUrlFetchApp } from './mocks'
+import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUserProperties } from './mocks'
 
 const mockGetDBCategoryList = vi.fn()
 const mockGetDBSubcategoryList = vi.fn()
@@ -9,7 +9,8 @@ const mockGetOrganization = vi.fn()
 const mocks = {
     SpreadsheetApp: mockSpreadsheetApp,
     UrlFetchApp: mockUrlFetchApp,
-    Logger: mockLogger
+    Logger: mockLogger,
+    PropertiesService: mockPropertiesService
 }
 const gLib = gas.require('./dist', mocks)
 gLib.getDBCategoryList = mockGetDBCategoryList
@@ -20,10 +21,13 @@ gLib.getOrganization = mockGetOrganization
 describe("Subcontractors", () => {
     const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000";
     const mockBaseUrl = 'https://mock.com'
-    const mockToken = 'mock-token'
+    const mockToken = 'mock-token' 
     const mockHeader = {
         'Authorization': `Bearer ${mockToken}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'ClientID': mockUserProperties.clientID,
+        'ClientSecret': mockUserProperties.clientSecret,
+        "ConnectionString": `Server=${mockUserProperties.serverName};Database=${mockUserProperties.dbName};MultipleActiveResultSets=true;Integrated Security=SSPI;`
     }
 
     beforeEach(() => {
@@ -43,7 +47,8 @@ describe("Subcontractors", () => {
                 url: mockBaseUrl + '/Resource/Category/SubcontractorCategory',
                 method: 'post',
                 headers: mockHeader,
-                payload: JSON.stringify({ Name: cat, EstimateREF: ESTIMATE_REF })
+                payload: JSON.stringify({ Name: cat, EstimateREF: ESTIMATE_REF }),
+                muteHttpExceptions: true
             }));
 
             const { failedCategories, createdCategories } = gLib._createSubcontractorCategories(categories, mockToken, mockBaseUrl);
@@ -67,7 +72,8 @@ describe("Subcontractors", () => {
                 url: mockBaseUrl + '/Resource/Category/SubcontractorCategory',
                 method: 'post',
                 headers: mockHeader,
-                payload: JSON.stringify({ Name: cat, EstimateREF: ESTIMATE_REF })
+                payload: JSON.stringify({ Name: cat, EstimateREF: ESTIMATE_REF }),
+                muteHttpExceptions: true
             }));
 
             const { failedCategories, createdCategories } = gLib._createSubcontractorCategories(categories, mockToken, mockBaseUrl);
@@ -91,7 +97,8 @@ describe("Subcontractors", () => {
                 url: mockBaseUrl + '/Resource/Category/SubcontractorCategory',
                 method: 'post',
                 headers: mockHeader,
-                payload: JSON.stringify({ Name: cat, EstimateREF: ESTIMATE_REF })
+                payload: JSON.stringify({ Name: cat, EstimateREF: ESTIMATE_REF }),
+                muteHttpExceptions: true
             }));
 
             const { failedCategories, createdCategories } = gLib._createSubcontractorCategories(categories, mockToken, mockBaseUrl);
@@ -120,13 +127,15 @@ describe("Subcontractors", () => {
                     url: mockBaseUrl + '/Resource/Organization/Subcontractor',
                     method: 'post',
                     headers: mockHeader,
-                    payload: JSON.stringify({ Name: 'Sub1', City: 'City1', Category: 'CatA' })
+                    payload: JSON.stringify({ Name: 'Sub1', City: 'City1', Category: 'CatA' }),
+                    muteHttpExceptions: true
                 },
                 {
                     url: mockBaseUrl + '/Resource/Organization/Subcontractor',
                     method: 'post',
                     headers: mockHeader,
-                    payload: JSON.stringify({ Name: 'Sub2', City: 'City2' })
+                    payload: JSON.stringify({ Name: 'Sub2', City: 'City2' }),
+                    muteHttpExceptions: true
                 }
             ]
 
@@ -189,7 +198,8 @@ describe("Subcontractors", () => {
                 url: mockBaseUrl + '/Resource/Organization/OrganizationWorkType',
                 method: 'post',
                 headers: mockHeader,
-                payload: JSON.stringify(payload)
+                payload: JSON.stringify(payload),
+                muteHttpExceptions: true
             }));
 
             const failed = gLib._addSubcontractorWorkTypes(workTypePayloads, mockToken, mockBaseUrl);
@@ -210,7 +220,8 @@ describe("Subcontractors", () => {
                 url: mockBaseUrl + '/Resource/Organization/OrganizationWorkType',
                 method: 'post',
                 headers: mockHeader,
-                payload: JSON.stringify(payload)
+                payload: JSON.stringify(payload),
+                muteHttpExceptions: true
             }));
 
             const failed = gLib._addSubcontractorWorkTypes(workTypePayloads, mockToken, mockBaseUrl);
@@ -237,7 +248,8 @@ describe("Subcontractors", () => {
                 url: mockBaseUrl + '/Resource/Organization/OrganizationWorkSubType',
                 method: 'post',
                 headers: mockHeader,
-                payload: JSON.stringify(payload)
+                payload: JSON.stringify(payload),
+                muteHttpExceptions: true
             }));
 
             const failed = gLib._addSubcontractorSubWorkTypes(workSubTypePayloads, mockToken, mockBaseUrl);
@@ -258,7 +270,8 @@ describe("Subcontractors", () => {
                 url: mockBaseUrl + '/Resource/Organization/OrganizationWorkSubType',
                 method: 'post',
                 headers: mockHeader,
-                payload: JSON.stringify(payload)
+                payload: JSON.stringify(payload),
+                muteHttpExceptions: true
             }));
 
             const failed = gLib._addSubcontractorSubWorkTypes(workSubTypePayloads, mockToken, mockBaseUrl);
@@ -349,7 +362,7 @@ describe("Subcontractors", () => {
             mock_createSubcontractorCategories.mockReturnValue({ failedCategories: [], createdCategories: [{Name: 'Cat1'}] });
             mock_createSubcontractors.mockReturnValue({ failedRows: [], createdSubcontractors: subData });
             mockGetDBCategoryList.mockReturnValue([{ Name: 'Type1', ObjectID: 'wt1' }]);
-            mockGetDBSubcategoryList.mockReturnValue([{ Name: 'SubType1', ObjectID: 'wst1' }]);
+            mockGetDBSubcategoryList.mockReturnValue([{ Name: 'SubType1', ObjectID: 'wst1', CategoryREF: 'wt1' }]);
             mock_addSubcontractorWorkTypes.mockReturnValue([]);
             mock_addSubcontractorSubWorkTypes.mockReturnValue([]);
 

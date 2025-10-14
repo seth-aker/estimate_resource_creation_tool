@@ -6,6 +6,7 @@
 </head>
 
 <body>
+  <p id="response"></p>
   <form id="user-properties-form">
     <div style="display: flex; flex-direction: column;">
       <label for="base-url">BaseUrl</label>
@@ -13,7 +14,7 @@
 
       <label for="username">Username</label>
       <input id="username" name="username" type="text" placeholder="F.Lastname.XXXX" required
-        pattern="[^@a-zA-Z0-9.]+" />
+        pattern="^[a-zA-Z0-9.]+$" />
 
       <label for="password">Password</label>
       <input id="password" name="password" type="password" required />
@@ -22,21 +23,27 @@
       <input id="clientID" name="clientID" type="text" placeholder="API Client ID" required />
 
       <label for="clientSecret">Client Secret</label>
-      <input id="clientSecret" name="clientSecret" type="text" placeholder="API Client Secret" required />
+      <input id="clientSecret" name="clientSecret" type="password" placeholder="API Client Secret" required />
 
+      <label for="serverName">Server Name</label>
+      <input id="serverName" name="serverName" type="text" placeholder="e.g. 'b2w-eus00-XXXX,48100'" required />
+
+      <label for="dbName">Database Name</label>
+      <input id="dbName" name="dbName" type="text" placeholder="DatabaseNameGoesHere" />
     </div>
     <button id="submit" type="submit" form="user-properties-form">Set Database Properties</button>
-    <p id="response"></p>
   </form>
 </body>
 <script>
   function handleSubmit(formElement) {
+    submitButton.disabled = true
     const baseUrl = formElement.querySelector('input[name="baseUrl"]').value
     const userName = formElement.querySelector('input[name="username"]').value
     const password = formElement.querySelector('input[name="password"]').value
     const clientID = formElement.querySelector('input[name="clientID"]').value
     const clientSecret = formElement.querySelector('input[name="clientSecret"]').value
-
+    const serverName = formElement.querySelector('input[name="serverName"]').value
+    const dbName = formElement.querySelector('input[name="dbName"]').value
     google.script.run
       .withSuccessHandler(handleSuccess)
       .withFailureHandler(handleError)
@@ -45,27 +52,34 @@
         userName,
         password,
         clientID,
-        clientSecret
+        clientSecret,
+        serverName,
+        dbName
       })
   }
   function handleSuccess() {
     document.getElementById('response').innerText = 'User properties successfully updated.'
-    setTimeout(google.script.host.close(), 2500)
   }
   function handleError(error) {
     document.getElementById('response').innerText = `An error occured setting user properties. Error: ${error.message}`
+    submitButton.disabled = false
   }
   function resetErrorMessage() {
+    submitButton.disabled = false
     document.getElementById('response').innerText = ""
   }
   const inputElements = document.getElementsByTagName("input")
-  inputElements.forEach((element) => {
+  Array.from(inputElements).forEach((element) => {
     element.addEventListener('change', resetErrorMessage)
   })
   const form = document.getElementById('user-properties-form')
-  form.addEventListener('submit', (event) => {
-    event.preventDefault()
-    handleSubmit(form)
+  const submitButton = document.getElementById('submit')
+
+  window.addEventListener('load', () => {
+    form.addEventListener('submit', (event) => {
+        event.preventDefault()
+        handleSubmit(form)
+      })
   })
 </script>
 
