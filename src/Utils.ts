@@ -60,6 +60,15 @@ function getSpreadSheetData<T>(spreadsheetName: string): T[] {
 }
 
 function createHeaders(token: string, additionalHeaders?: Record<string, string>) {
+    const baseUrl = PropertiesService.getUserProperties().getProperty('baseUrl')
+    const userName = PropertiesService.getUserProperties().getProperty('userName')
+    if(!baseUrl || !userName) {
+      throw new Error('Missing required user properties')
+    }
+    const databaseCode = userName.substring(userName.lastIndexOf('.') + 1)
+    const databaseName = baseUrl.substring(baseUrl.lastIndexOf('/') + 1)
+    const httpsLength = 8;
+    const serverName = baseUrl.substring(httpsLength, ) //b2w-eus10
     return {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',

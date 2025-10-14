@@ -1,5 +1,56 @@
+type TUserVariables = {
+  baseUrl: string,
+  clientID: string,
+  clientSecret: string,
+  userName: string,
+  password: string
+}
+function setUserVariables(vars: TUserVariables) {
+  console.log(vars)
+  try {
+    PropertiesService.getUserProperties().setProperties(vars)
+  } catch (err) {
+    SpreadsheetApp.getUi().alert(`An error occured setting properties: ${err}`)
+    throw err
+  }
+}
+function _getUserVariables() {
+  const props = PropertiesService.getScriptProperties().getProperties()
+  const baseUrl = props['baseUrl']
+  const clientID = props['clientID']
+  const clientSecret = props['clientSecret']
+  const userName = props['userName']
+  const password = props['passwords']
 
+  if(!baseUrl) {
+    SpreadsheetApp.getUi().alert(`BaseUrl required!`)
+    return
+  }
+  if(!clientID) {
+    SpreadsheetApp.getUi().alert('Client Id required!')
+    return
+  }
+  if(!clientSecret) {
+    SpreadsheetApp.getUi().alert('Client Secret required!')
+    return
+  }
+  if(!userName) {
+    SpreadsheetApp.getUi().alert('Username required!')
+    return
+  }
+  if(!password) {
+    SpreadsheetApp.getUi().alert('Password required!')
+    return
+  }
+  return {
+    baseUrl,
+    clientID,
+    clientSecret,
+    userName,
+    password
+  }
 
+}
 function _getSpreadsheetVars() {
   const varSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('API_Information');
   if(!varSheet) return
@@ -80,7 +131,7 @@ function authenticate() {
   if(TOKEN && BASE_URL) {
     return {token: TOKEN, baseUrl: BASE_URL}
   }
-  const spreadsheetVars = _getSpreadsheetVars()
+  const spreadsheetVars = _getUserVariables()
   if(!spreadsheetVars) throw new Error("Missing API_Information!")
   const token = _getToken(spreadsheetVars.baseUrl, spreadsheetVars)
   return {token, baseUrl: spreadsheetVars.baseUrl}

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+</head>
+
+<body>
+  <form id="user-properties-form">
+    <div style="display: flex; flex-direction: column;">
+      <label for="base-url">BaseUrl</label>
+      <input id="base-url" name="baseUrl" type="text" placeholder="The base url for the API" required />
+
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" placeholder="F.Lastname.XXXX" required
+        pattern="[^@a-zA-Z0-9.]+" />
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required />
+
+      <label for="clientID">ClientID</label>
+      <input id="clientID" name="clientID" type="text" placeholder="API Client ID" required />
+
+      <label for="clientSecret">Client Secret</label>
+      <input id="clientSecret" name="clientSecret" type="text" placeholder="API Client Secret" required />
+
+    </div>
+    <button id="submit" type="submit" form="user-properties-form">Set Database Properties</button>
+    <p id="response"></p>
+  </form>
+</body>
+<script>
+  function handleSubmit(formElement) {
+    const baseUrl = formElement.querySelector('input[name="baseUrl"]').value
+    const userName = formElement.querySelector('input[name="username"]').value
+    const password = formElement.querySelector('input[name="password"]').value
+    const clientID = formElement.querySelector('input[name="clientID"]').value
+    const clientSecret = formElement.querySelector('input[name="clientSecret"]').value
+
+    google.script.run
+      .withSuccessHandler(handleSuccess)
+      .withFailureHandler(handleError)
+      .setUserVariables({
+        baseUrl,
+        userName,
+        password,
+        clientID,
+        clientSecret
+      })
+  }
+  function handleSuccess() {
+    document.getElementById('response').innerText = 'User properties successfully updated.'
+    setTimeout(google.script.host.close(), 2500)
+  }
+  function handleError(error) {
+    document.getElementById('response').innerText = `An error occured setting user properties. Error: ${error.message}`
+  }
+  function resetErrorMessage() {
+    document.getElementById('response').innerText = ""
+  }
+  const inputElements = document.getElementsByTagName("input")
+  inputElements.forEach((element) => {
+    element.addEventListener('change', resetErrorMessage)
+  })
+  const form = document.getElementById('user-properties-form')
+  form.addEventListener('submit', (event) => {
+    event.preventDefault()
+    handleSubmit(form)
+  })
+</script>
+
+</html>
