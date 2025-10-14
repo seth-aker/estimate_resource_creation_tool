@@ -63,6 +63,7 @@ function createHeaders(token: string, additionalHeaders?: Record<string, string>
     return {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        // 'ConnectionString': 
         ...additionalHeaders
     }
 }

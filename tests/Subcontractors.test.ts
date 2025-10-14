@@ -1,6 +1,10 @@
-import { vi, describe, it, beforeEach, expect, beforeAll } from 'vitest'
+import { vi, describe, it, beforeEach, expect, beforeAll} from 'vitest'
 import gas from 'gas-local'
 import { mockLogger, mockSpreadsheetApp, mockUi, mockUrlFetchApp } from './mocks'
+
+const mockGetDBCategoryList = vi.fn()
+const mockGetDBSubcategoryList = vi.fn()
+const mockGetOrganization = vi.fn()
 
 const mocks = {
     SpreadsheetApp: mockSpreadsheetApp,
@@ -8,256 +12,355 @@ const mocks = {
     Logger: mockLogger
 }
 const gLib = gas.require('./dist', mocks)
-
-// --- MOCK CONSTANTS ---
-const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000"
-const mockBaseUrl = 'https://mock.com'
-const mockToken = 'mockToken'
-const mockHeader = {
-    'Authorization': `Bearer ${mockToken}`,
-    'Content-Type': 'application/json',
-}
-
-// --- MOCK DATA ---
-const mockSubcontractorRow: ISubcontractorRow = {
-    Name: 'Sub One',
-    City: 'Cityville',
-    "Subcontractor Category": "Plumbing",
-    "Work Types": "Rough-in, Finishing",
-    Notes: 'Notes here'
-}
-
-const mockSubcontractorRow2: ISubcontractorRow = {
-    Name: 'Sub Two',
-    City: 'Townsburgh',
-    "Subcontractor Category": "Electrical",
-    "Work Types": "Wiring",
-    Notes: 'More notes'
-}
-
-const mockCreatedSub1: ISubcontractorDTO = {
-    ObjectID: 'sub-obj-id-1',
-    Name: 'Sub One',
-    City: 'Cityville',
-    Category: 'Plumbing',
-    Notes: 'Notes here'
-}
-
-const mockCreatedSub2: ISubcontractorDTO = {
-    ObjectID: 'sub-obj-id-2',
-    Name: 'Sub Two',
-    City: 'Townsburgh',
-    Category: 'Electrical',
-    Notes: 'More notes'
-}
+gLib.getDBCategoryList = mockGetDBCategoryList
+gLib.getDBSubcategoryList = mockGetDBSubcategoryList
+gLib.getOrganization = mockGetOrganization
 
 
-describe('Subcontractors', () => {
+describe("Subcontractors", () => {
+    const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000";
+    const mockBaseUrl = 'https://mock.com'
+    const mockToken = 'mock-token'
+    const mockHeader = {
+        'Authorization': `Bearer ${mockToken}`,
+        'Content-Type': 'application/json'
+    }
+
     beforeEach(() => {
-        vi.clearAllMocks()
+        vi.resetAllMocks()
     })
 
-    describe('_createSubcontractorCategories', () => {
-        const mockCategories = ['Plumbing', 'Electrical']
-        const expectedUrl = `${mockBaseUrl}/Resource/Category/SubcontractorCategory`
-        const expectedBatchOptions = mockCategories.map(cat => ({
-            url: expectedUrl,
-            headers: mockHeader,
-            method: 'post' as const,
-            payload: JSON.stringify({ Name: cat, EstimateREF: ESTIMATE_REF })
-        }))
+    describe("_createSubcontractorCategories", () => {
+        it('should create categories successfully', () => {
+            const categories = ['Cat1', 'Cat2'];
+            const mockResponses = categories.map(cat => ({
+                getResponseCode: () => 201,
+                getContentText: () => JSON.stringify({ Item: { Name: cat } })
+            }));
+            mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
 
-        it('successfully creates categories and returns them', () => {
-            mockUrlFetchApp.fetchAll.mockReturnValue([
-                { getResponseCode: () => 201, getContentText: () => JSON.stringify({ Item: { Name: 'Plumbing', ObjectID: 'cat1' } }) },
-                { getResponseCode: () => 201, getContentText: () => JSON.stringify({ Item: { Name: 'Electrical', ObjectID: 'cat2' } }) }
-            ])
+            const expectedOptions = categories.map(cat => ({
+                url: mockBaseUrl + '/Resource/Category/SubcontractorCategory',
+                method: 'post',
+                headers: mockHeader,
+                payload: JSON.stringify({ Name: cat, EstimateREF: ESTIMATE_REF })
+            }));
 
-            const { failedCategories, createdCategories } = gLib._createSubcontractorCategories(mockCategories, mockToken, mockBaseUrl)
+            const { failedCategories, createdCategories } = gLib._createSubcontractorCategories(categories, mockToken, mockBaseUrl);
 
-            expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledWith(expectedBatchOptions)
-            expect(failedCategories).toHaveLength(0)
-            expect(createdCategories).toEqual([{ Name: 'Plumbing', ObjectID: 'cat1' }, { Name: 'Electrical', ObjectID: 'cat2' }])
-            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor Category: "Plumbing" successfully created')
-        })
+            expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledWith(expectedOptions);
+            expect(failedCategories).toHaveLength(0);
+            const expectedCategories = [{ Name: 'Cat1' }, { Name: 'Cat2' }];
+            expect(createdCategories).toEqual(expectedCategories);
+            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor Category: "Cat1" successfully created');
+            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor Category: "Cat2" successfully created');
+        });
 
-        it('handles failures and returns the failed category names', () => {
-            mockUrlFetchApp.fetchAll.mockReturnValue([
-                { getResponseCode: () => 500, getContentText: () => 'Server Error' },
-                { getResponseCode: () => 201, getContentText: () => JSON.stringify({ Item: { Name: 'Electrical', ObjectID: 'cat2' } }) }
-            ])
+        it('should handle failed category creation', () => {
+            const categories = ['Cat1', 'Cat2'];
+            const mockResponses = categories.map(() => ({
+                getResponseCode: () => 400,
+                getContentText: () => 'Error'
+            }));
+            mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
+            const expectedOptions = categories.map(cat => ({
+                url: mockBaseUrl + '/Resource/Category/SubcontractorCategory',
+                method: 'post',
+                headers: mockHeader,
+                payload: JSON.stringify({ Name: cat, EstimateREF: ESTIMATE_REF })
+            }));
 
-            const { failedCategories, createdCategories } = gLib._createSubcontractorCategories(mockCategories, mockToken, mockBaseUrl)
+            const { failedCategories, createdCategories } = gLib._createSubcontractorCategories(categories, mockToken, mockBaseUrl);
 
-            expect(failedCategories).toEqual(['Plumbing'])
-            expect(createdCategories).toEqual([{ Name: 'Electrical', ObjectID: 'cat2' }])
-            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor Category: "Plumbing" failed to create with status code 500. Error: Server Error')
-        })
+            expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledWith(expectedOptions);
+            expect(failedCategories).toEqual(categories);
+            expect(createdCategories).toHaveLength(0);
+            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor Category: "Cat1" failed to create with status code 400. Error: Error');
+            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor Category: "Cat2" failed to create with status code 400. Error: Error');
+        });
 
-        it('handles existing categories (409) and fetches them', () => {
-            gLib.getDBCategoryList = vi.fn().mockReturnValue([{ Name: 'Plumbing', ObjectID: 'existing-cat1' }])
-            mockUrlFetchApp.fetchAll.mockReturnValue([
-                { getResponseCode: () => 409, getContentText: () => 'Conflict' },
-                { getResponseCode: () => 201, getContentText: () => JSON.stringify({ Item: { Name: 'Electrical', ObjectID: 'cat2' } }) }
-            ])
+        it('should handle existing categories', () => {
+            const categories = ['Cat1', 'Cat2'];
+            const mockResponses = categories.map(() => ({
+                getResponseCode: () => 409
+            }));
+            mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
+            const expectedCategories = [{ Name: 'Cat1' }, { Name: 'Cat2' }];
+            mockGetDBCategoryList.mockReturnValue(expectedCategories);
+             const expectedOptions = categories.map(cat => ({
+                url: mockBaseUrl + '/Resource/Category/SubcontractorCategory',
+                method: 'post',
+                headers: mockHeader,
+                payload: JSON.stringify({ Name: cat, EstimateREF: ESTIMATE_REF })
+            }));
 
-            const { failedCategories, createdCategories } = gLib._createSubcontractorCategories(mockCategories, mockToken, mockBaseUrl)
+            const { failedCategories, createdCategories } = gLib._createSubcontractorCategories(categories, mockToken, mockBaseUrl);
 
-            const expectedQuery = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (Name eq 'Plumbing')`
-            expect(gLib.getDBCategoryList).toHaveBeenCalledWith('SubcontractorCategory', mockToken, mockBaseUrl, expectedQuery)
-            expect(failedCategories).toHaveLength(0)
-            expect(createdCategories).toContainEqual({ Name: 'Plumbing', ObjectID: 'existing-cat1' })
-            expect(createdCategories).toContainEqual({ Name: 'Electrical', ObjectID: 'cat2' })
-            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor Category: "Plumbing" already existed in the database.')
-        })
-    })
+            expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledWith(expectedOptions);
+            expect(failedCategories).toHaveLength(0);
+            expect(createdCategories).toEqual(expectedCategories);
+            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor Category: "Cat1" already existed in the database.');
+            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor Category: "Cat2" already existed in the database.');
+            expect(mockGetDBCategoryList).toHaveBeenCalled();
+        });
+    });
 
     describe('_createSubcontractors', () => {
-        const subcontractorData = [mockSubcontractorRow, mockSubcontractorRow2]        
-        it('successfully creates subcontractors', () => {
-            mockUrlFetchApp.fetchAll.mockReturnValue([
-                { getResponseCode: () => 201, getContentText: () => JSON.stringify({ Item: mockCreatedSub1 }) },
-                { getResponseCode: () => 201, getContentText: () => JSON.stringify({ Item: mockCreatedSub2 }) }
-            ])
+        const subData = [{ Name: 'Sub1', City: 'City1', "Work Types": "Type1", "Subcontractor Category": "CatA" }, { Name: 'Sub2', City: 'City2', "Work Types": "Type2" }];
+        const expectedSubcontractors = [{ Name: 'Sub1' }, { Name: 'Sub2' }];
 
-            const { failedRows, createdSubcontractors } = gLib._createSubcontractors(subcontractorData, mockToken, mockBaseUrl)
+        it('should create subcontractors successfully', () => {
+            const mockResponses = subData.map(sub => ({
+                getResponseCode: () => 201,
+                getContentText: () => JSON.stringify({ Item: { Name: sub.Name } })
+            }));
+            mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
+            const expectedOptions = [
+                {
+                    url: mockBaseUrl + '/Resource/Organization/Subcontractor',
+                    method: 'post',
+                    headers: mockHeader,
+                    payload: JSON.stringify({ Name: 'Sub1', City: 'City1', Category: 'CatA' })
+                },
+                {
+                    url: mockBaseUrl + '/Resource/Organization/Subcontractor',
+                    method: 'post',
+                    headers: mockHeader,
+                    payload: JSON.stringify({ Name: 'Sub2', City: 'City2' })
+                }
+            ]
 
-            expect(failedRows).toHaveLength(0)
-            expect(createdSubcontractors).toEqual([mockCreatedSub1, mockCreatedSub2])
-            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor "Sub One" successfully created')
-            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor "Sub Two" successfully created')
-        })
+            const { failedRows, createdSubcontractors } = gLib._createSubcontractors(subData, mockToken, mockBaseUrl);
 
-        it('handles errors and returns failed row numbers', () => {
-            mockUrlFetchApp.fetchAll.mockReturnValue([
-                { getResponseCode: () => 400, getContentText: () => 'Bad Request' },
-                { getResponseCode: () => 201, getContentText: () => JSON.stringify({ Item: mockCreatedSub2 }) }
-            ])
+            expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledWith(expectedOptions);
+            expect(failedRows).toHaveLength(0);
+            expect(createdSubcontractors).toEqual(expectedSubcontractors);
+            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor "Sub1" successfully created');
+            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor "Sub2" successfully created');
+        });
 
-            const { failedRows, createdSubcontractors } = gLib._createSubcontractors(subcontractorData, mockToken, mockBaseUrl)
-            
-            expect(failedRows).toEqual([2]) // Index 0 + 2
-            expect(createdSubcontractors).toEqual([mockCreatedSub2])
-            expect(mockLogger.log).toHaveBeenCalledWith('An error with code 400 occured creating subcontractor at line 2. Error: Bad Request ')
-        })
+        it('should handle failed subcontractor creation', () => {
+            const mockResponses = subData.map(() => ({
+                getResponseCode: () => 500,
+                getContentText: () => 'Server Error'
+            }));
+            mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
 
-        it('handles existing subcontractors (200/409) and fetches them', () => {
-            gLib.getOrganization = vi.fn().mockReturnValue([mockCreatedSub1])
-            mockUrlFetchApp.fetchAll.mockReturnValue([
-                { getResponseCode: () => 409, getContentText: () => 'Conflict' },
-                { getResponseCode: () => 201, getContentText: () => JSON.stringify({ Item: mockCreatedSub2 }) }
-            ])
-            
-            const { failedRows, createdSubcontractors } = gLib._createSubcontractors(subcontractorData, mockToken, mockBaseUrl)
-            
-            const expectedQuery = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (Name eq Sub One)`
-            expect(gLib.getOrganization).toHaveBeenCalledWith('Subcontractor', mockToken, mockBaseUrl, expectedQuery)
-            expect(failedRows).toHaveLength(0)
-            expect(createdSubcontractors).toContainEqual(mockCreatedSub1)
-            expect(createdSubcontractors).toContainEqual(mockCreatedSub2)
-            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor "Sub One" already exists in the database.')
-        })
-    })
+            const { failedRows, createdSubcontractors } = gLib._createSubcontractors(subData, mockToken, mockBaseUrl);
+
+            expect(mockUrlFetchApp.fetchAll).toHaveBeenCalled();
+            expect(failedRows).toEqual([2, 3]);
+            expect(createdSubcontractors).toHaveLength(0);
+            expect(mockLogger.log).toHaveBeenCalledWith('An error with code 500 occured creating subcontractor at line 2. Error: Server Error ');
+            expect(mockLogger.log).toHaveBeenCalledWith('An error with code 500 occured creating subcontractor at line 3. Error: Server Error ');
+        });
+
+        it('should fetch existing subcontractors', () => {
+            const mockResponses = subData.map(sub => ({
+                getResponseCode: () => 409,
+                 getContentText: () => JSON.stringify({ Item: { Name: sub.Name } })
+            }));
+            mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
+            mockGetOrganization.mockReturnValue(expectedSubcontractors);
+
+            const { failedRows, createdSubcontractors } = gLib._createSubcontractors(subData, mockToken, mockBaseUrl);
+
+            expect(mockUrlFetchApp.fetchAll).toHaveBeenCalled();
+            expect(failedRows).toHaveLength(0);
+            expect(createdSubcontractors).toEqual(expectedSubcontractors);
+            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor "Sub1" already exists in the database.');
+            expect(mockLogger.log).toHaveBeenCalledWith('Subcontractor "Sub2" already exists in the database.');
+            expect(mockGetOrganization).toHaveBeenCalled();
+        });
+    });
 
     describe('_addSubcontractorWorkTypes', () => {
-        const mockPayloads: ISubconWorkTypePayload[] = [
+        const workTypePayloads = [
             { OrganizationREF: 'org1', WorkTypeCategoryREF: 'wt1' },
             { OrganizationREF: 'org2', WorkTypeCategoryREF: 'wt2' }
-        ]
-        
-        it('successfully adds work types and returns no failures', () => {
-             mockUrlFetchApp.fetchAll.mockReturnValue([
-                { getResponseCode: () => 201, getContentText: () => '' },
-                { getResponseCode: () => 201, getContentText: () => '' }
-            ])
-            const failed = gLib._addSubcontractorWorkTypes(mockPayloads, mockToken, mockBaseUrl)
-            expect(failed).toHaveLength(0)
-            expect(mockLogger.log).toHaveBeenCalledWith('Work type with id: wt1 added to organization with id: org1')
-        })
+        ];
 
-        it('returns failed payloads on error', () => {
-            mockUrlFetchApp.fetchAll.mockReturnValue([
-               { getResponseCode: () => 500, getContentText: () => 'Error' },
-               { getResponseCode: () => 201, getContentText: () => '' }
-           ])
-           const failed = gLib._addSubcontractorWorkTypes(mockPayloads, mockToken, mockBaseUrl)
-           expect(failed).toEqual([mockPayloads[0]])
-           expect(mockLogger.log).toHaveBeenCalledWith(`An error occured adding work type with id: wt1 to subcontractor with id org1. Code: 500. Error: Error`)
-       })
-    })
+        it('should add work types successfully', () => {
+            const mockResponses = workTypePayloads.map(() => ({
+                getResponseCode: () => 201
+            }));
+            mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
+            const expectedOptions = workTypePayloads.map(payload => ({
+                url: mockBaseUrl + '/Resource/Organization/OrganizationWorkType',
+                method: 'post',
+                headers: mockHeader,
+                payload: JSON.stringify(payload)
+            }));
 
-    // Note: _addSubcontractorSubWorkTypes is nearly identical to _addSubcontractorWorkTypes,
-    // so tests would follow the same pattern, just with different property names and log messages.
+            const failed = gLib._addSubcontractorWorkTypes(workTypePayloads, mockToken, mockBaseUrl);
+
+            expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledWith(expectedOptions);
+            expect(failed).toHaveLength(0);
+            expect(mockLogger.log).toHaveBeenCalledWith('Work type with id: wt1 added to organization with id: org1');
+            expect(mockLogger.log).toHaveBeenCalledWith('Work type with id: wt2 added to organization with id: org2');
+        });
+
+        it('should handle failures when adding work types', () => {
+            const mockResponses = workTypePayloads.map(() => ({
+                getResponseCode: () => 400,
+                getContentText: () => 'Error'
+            }));
+            mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
+            const expectedOptions = workTypePayloads.map(payload => ({
+                url: mockBaseUrl + '/Resource/Organization/OrganizationWorkType',
+                method: 'post',
+                headers: mockHeader,
+                payload: JSON.stringify(payload)
+            }));
+
+            const failed = gLib._addSubcontractorWorkTypes(workTypePayloads, mockToken, mockBaseUrl);
+
+            expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledWith(expectedOptions);
+            expect(failed).toEqual(workTypePayloads);
+            expect(mockLogger.log).toHaveBeenCalledWith('An error occured adding work type with id: wt1 to subcontractor with id org1. Code: 400. Error: Error');
+            expect(mockLogger.log).toHaveBeenCalledWith('An error occured adding work type with id: wt2 to subcontractor with id org2. Code: 400. Error: Error');
+        });
+    });
+    
+    describe('_addSubcontractorSubWorkTypes', () => {
+        const workSubTypePayloads = [
+            { OrganizationREF: 'org1', WorkSubtypeCategoryREF: 'wst1' },
+            { OrganizationREF: 'org2', WorkSubtypeCategoryREF: 'wst2' }
+        ];
+
+        it('should add work subtypes successfully', () => {
+            const mockResponses = workSubTypePayloads.map(() => ({
+                getResponseCode: () => 201
+            }));
+            mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
+            const expectedOptions = workSubTypePayloads.map(payload => ({
+                url: mockBaseUrl + '/Resource/Organization/OrganizationWorkSubType',
+                method: 'post',
+                headers: mockHeader,
+                payload: JSON.stringify(payload)
+            }));
+
+            const failed = gLib._addSubcontractorSubWorkTypes(workSubTypePayloads, mockToken, mockBaseUrl);
+
+            expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledWith(expectedOptions);
+            expect(failed).toHaveLength(0);
+            expect(mockLogger.log).toHaveBeenCalledWith('Work subtype with id: wst1 successfully added to organization with id: org1');
+            expect(mockLogger.log).toHaveBeenCalledWith('Work subtype with id: wst2 successfully added to organization with id: org2');
+        });
+
+        it('should handle failures when adding work subtypes', () => {
+            const mockResponses = workSubTypePayloads.map(() => ({
+                getResponseCode: () => 400,
+                getContentText: () => 'Error'
+            }));
+            mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
+            const expectedOptions = workSubTypePayloads.map(payload => ({
+                url: mockBaseUrl + '/Resource/Organization/OrganizationWorkSubType',
+                method: 'post',
+                headers: mockHeader,
+                payload: JSON.stringify(payload)
+            }));
+
+            const failed = gLib._addSubcontractorSubWorkTypes(workSubTypePayloads, mockToken, mockBaseUrl);
+
+            expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledWith(expectedOptions);
+            expect(failed).toEqual(workSubTypePayloads);
+            expect(mockLogger.log).toHaveBeenCalledWith('An error occured adding work subtype with id: wst1 to subcontractor with id org1. Code: 400. Error: Error');
+            expect(mockLogger.log).toHaveBeenCalledWith('An error occured adding work subtype with id: wst2 to subcontractor with id org2. Code: 400. Error: Error');
+        });
+    });
 
     describe('CreateSubcontractors', () => {
-        // Mock all dependencies of the main function
+        const mockGetSpreadSheetData = vi.fn();
+        const mock_createSubcontractorCategories = vi.fn();
+        const mock_createSubcontractors = vi.fn();
+        const mock_addSubcontractorWorkTypes = vi.fn();
+        const mock_addSubcontractorSubWorkTypes = vi.fn();
+        const mockHighlightRows = vi.fn();
+
         beforeAll(() => {
-            gLib.authenticate = vi.fn(() => ({ token: mockToken, baseUrl: mockBaseUrl }))
-            gLib.getSpreadSheetData = vi.fn()
-            gLib._createSubcontractorCategories = vi.fn()
-            gLib._createSubcontractors = vi.fn()
-            gLib.highlightRows = vi.fn()
-            gLib.getDBCategoryList = vi.fn()
-            gLib.getDBSubcategoryList = vi.fn()
-            gLib._addSubcontractorWorkTypes = vi.fn()
-            gLib._addSubcontractorSubWorkTypes = vi.fn()
-        })
+            gLib.authenticate = vi.fn(() => ({ token: mockToken, baseUrl: mockBaseUrl }));
+            gLib.getSpreadSheetData = mockGetSpreadSheetData;
+            gLib._createSubcontractorCategories = mock_createSubcontractorCategories;
+            gLib._createSubcontractors = mock_createSubcontractors;
+            gLib._addSubcontractorWorkTypes = mock_addSubcontractorWorkTypes;
+            gLib._addSubcontractorSubWorkTypes = mock_addSubcontractorSubWorkTypes;
+            gLib.highlightRows = mockHighlightRows;
+        });
 
-        it('exits early if no spreadsheet data is found', () => {
-            gLib.getSpreadSheetData.mockReturnValue([])
-            
-            gLib.CreateSubcontractors()
+        it('should exit early if no data is present', () => {
+            mockGetSpreadSheetData.mockReturnValue([]);
+            gLib.CreateSubcontractors();
+            expect(mockLogger.log).toHaveBeenCalledWith('CreateSubcontractors() failed to run because there was no data to send.');
+            expect(mockUi.alert).toHaveBeenCalledWith('No data to send!');
+            expect(mock_createSubcontractorCategories).not.toHaveBeenCalled();
+        });
 
-            expect(mockLogger.log).toHaveBeenCalledWith('No data to send!')
-            expect(mockUi.alert).toHaveBeenCalledWith('No data to send!')
-            expect(gLib._createSubcontractors).not.toHaveBeenCalled()
-        })
+        it('should throw an error if subcontractor category creation fails', () => {
+            mockGetSpreadSheetData.mockReturnValue([
+                { Name: 'Sub1', City: 'City1', 'Subcontractor Category': 'Cat1', "Work Types": 'Type1' }
+            ]);
+            mock_createSubcontractorCategories.mockReturnValue({ failedCategories: ['Cat1'], createdCategories: [] });
 
-        it('throws an error if subcontractor category creation fails', () => {
-            gLib.getSpreadSheetData.mockReturnValue([mockSubcontractorRow])
-            gLib._createSubcontractorCategories.mockReturnValue({ failedCategories: ['Plumbing'], createdCategories: [] })
+            expect(() => gLib.CreateSubcontractors()).toThrow('Script failed while creating the following subcontractor categories: Cat1');
+        });
 
-            expect(() => gLib.CreateSubcontractors()).toThrow('Script failed while creating the following subcontractor categories: Plumbing')
-        })
+        it('should throw an error and highlight rows if subcontractor creation fails', () => {
+            mockGetSpreadSheetData.mockReturnValue([
+                { Name: 'Sub1', City: 'City1', 'Subcontractor Category': 'Cat1', "Work Types": 'Type1' }
+            ]);
+            mock_createSubcontractorCategories.mockReturnValue({ failedCategories: [], createdCategories: [{ Name: 'Cat1' }] });
+            mock_createSubcontractors.mockReturnValue({ failedRows: [2], createdSubcontractors: [] });
 
-        it('highlights rows and alerts if subcontractor creation fails', () => {
-            gLib.getSpreadSheetData.mockReturnValue([mockSubcontractorRow])
-            gLib._createSubcontractorCategories.mockReturnValue({ failedCategories: [], createdCategories: [] })
-            gLib._createSubcontractors.mockReturnValue({ failedRows: [2], createdSubcontractors: [] })
-            gLib.getDBCategoryList.mockReturnValue([])
-            gLib.getDBSubcategoryList.mockReturnValue([])
+            expect(() => gLib.CreateSubcontractors()).toThrow('Some rows failed to be created. Failed Rows: 2');
+            expect(mockHighlightRows).toHaveBeenCalledWith([2], 'red');
+        });
 
-            expect(() => gLib.CreateSubcontractors()).toThrowError('Some rows failed to be created. Failed Rows: 2')
-            
-            expect(gLib.highlightRows).toHaveBeenCalledWith([2], 'red')
-        })
+        it('should throw an error if adding work types fails', () => {
+            const subData = [{ Name: 'Sub1', City: 'City1', "Work Types": "Type1", ObjectID: 'sub1' }];
+            mockGetSpreadSheetData.mockReturnValue(subData);
+            mock_createSubcontractorCategories.mockReturnValue({ failedCategories: [], createdCategories: [] });
+            mock_createSubcontractors.mockReturnValue({ failedRows: [], createdSubcontractors: subData });
+            mockGetDBCategoryList.mockReturnValue([{ Name: 'Type1', ObjectID: 'wt1' }]);
+            mockGetDBSubcategoryList.mockReturnValue([]);
+            const failedPayload = [{ OrganizationREF: 'sub1', WorkTypeCategoryREF: 'wt1' }];
+            mock_addSubcontractorWorkTypes.mockReturnValue(failedPayload);
 
-        it('runs the full process successfully', () => {
-            gLib.getSpreadSheetData.mockReturnValue([mockSubcontractorRow])
-            gLib._createSubcontractorCategories.mockReturnValue({ failedCategories: [], createdCategories: [] })
-            gLib._createSubcontractors.mockReturnValue({ failedRows: [], createdSubcontractors: [mockCreatedSub1] })
-            // Mock DB fetches for work types
-            gLib.getDBCategoryList.mockReturnValue([{ Name: "Rough-in", ObjectID: 'wt-id-1' }]) // WorkType
-            gLib.getDBSubcategoryList.mockReturnValue([{ Name: "Finishing", ObjectID: 'wst-id-1' }]) // WorkSubType
-            // Mock final add steps
-            gLib._addSubcontractorWorkTypes.mockReturnValue([])
-            gLib._addSubcontractorSubWorkTypes.mockReturnValue([])
+            expect(() => gLib.CreateSubcontractors()).toThrow();
+        });
 
-            gLib.CreateSubcontractors()
+        it('should throw an error if adding work subtypes fails', () => {
+            const subData = [{ Name: 'Sub1', City: 'City1', "Work Types": "SubType1", ObjectID: 'sub1' }];
+            mockGetSpreadSheetData.mockReturnValue(subData);
+            mock_createSubcontractorCategories.mockReturnValue({ failedCategories: [], createdCategories: [] });
+            mock_createSubcontractors.mockReturnValue({ failedRows: [], createdSubcontractors: subData });
+            mockGetDBCategoryList.mockReturnValue([]);
+            mockGetDBSubcategoryList.mockReturnValue([{ Name: 'SubType1', ObjectID: 'wst1' }]);
+            mock_addSubcontractorWorkTypes.mockReturnValue([]);
+            const failedPayload = [{ OrganizationREF: 'sub1', WorkSubtypeCategoryREF: 'wst1' }];
+            mock_addSubcontractorSubWorkTypes.mockReturnValue(failedPayload);
 
-            // Verify payload creation for linking work types
-            const expectedWorkTypePayload = [{
-                OrganizationREF: 'sub-obj-id-1',
-                WorkTypeCategoryREF: 'wt-id-1'
-            }]
-            const expectedWorkSubTypePayload = [{
-                OrganizationREF: 'sub-obj-id-1',
-                WorkSubtypeCategoryREF: 'wst-id-1'
-            }]
+            expect(() => gLib.CreateSubcontractors()).toThrow();
+        });
 
-            expect(gLib._addSubcontractorWorkTypes).toHaveBeenCalledWith(expectedWorkTypePayload, mockToken, mockBaseUrl)
-            expect(gLib._addSubcontractorSubWorkTypes).toHaveBeenCalledWith(expectedWorkSubTypePayload, mockToken, mockBaseUrl)
-            expect(mockUi.alert).toHaveBeenCalledWith('All subcontractors created successfully!')
-        })
-    })
-})
+        it('should run successfully to completion', () => {
+            const subData = [{ Name: 'Sub1', City: 'City1', "Work Types": "Type1, SubType1", 'Subcontractor Category': 'Cat1', ObjectID: 'sub1' }];
+            mockGetSpreadSheetData.mockReturnValue(subData);
+            mock_createSubcontractorCategories.mockReturnValue({ failedCategories: [], createdCategories: [{Name: 'Cat1'}] });
+            mock_createSubcontractors.mockReturnValue({ failedRows: [], createdSubcontractors: subData });
+            mockGetDBCategoryList.mockReturnValue([{ Name: 'Type1', ObjectID: 'wt1' }]);
+            mockGetDBSubcategoryList.mockReturnValue([{ Name: 'SubType1', ObjectID: 'wst1' }]);
+            mock_addSubcontractorWorkTypes.mockReturnValue([]);
+            mock_addSubcontractorSubWorkTypes.mockReturnValue([]);
+
+            gLib.CreateSubcontractors();
+
+            expect(mock_createSubcontractorCategories).toHaveBeenCalledWith(['Cat1'], mockToken, mockBaseUrl);
+            expect(mock_createSubcontractors).toHaveBeenCalledWith(subData, mockToken, mockBaseUrl);
+            expect(mock_addSubcontractorWorkTypes).toHaveBeenCalledWith([{ OrganizationREF: 'sub1', WorkTypeCategoryREF: 'wt1' }], mockToken, mockBaseUrl);
+            expect(mock_addSubcontractorSubWorkTypes).toHaveBeenCalledWith([{ OrganizationREF: 'sub1', WorkSubtypeCategoryREF: 'wst1' }], mockToken, mockBaseUrl);
+            expect(mockUi.alert).toHaveBeenCalledWith('All subcontractors created successfully!');
+        });
+    });
+});
+

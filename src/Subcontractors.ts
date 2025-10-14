@@ -27,7 +27,7 @@ function CreateSubcontractors() {
     const {token, baseUrl} = authenticate()
     const subcontractorData = getSpreadSheetData<ISubcontractorRow>('Subcontractors');
     if (!subcontractorData || subcontractorData.length === 0) {
-        Logger.log("No data to send!");
+        Logger.log("CreateSubcontractors() failed to run because there was no data to send.");
         SpreadsheetApp.getUi().alert('No data to send!');
         return;
     }
@@ -92,7 +92,7 @@ function CreateSubcontractors() {
     if(failedSubcontractorWorkTypes.length > 0) {
         throw new Error(`An error occured adding the following work types to subcontractors: 
             ${failedSubcontractorWorkTypes.map(each => {
-                return `Subcontractor: "${createdSubcontractors.find(sub => sub.ObjectID === each.OrganizationREF)}", Work Type: "${allWorkTypes.find(wt => wt.ObjectID === each.WorkTypeCategoryREF)}"`
+                return `Subcontractor: "${createdSubcontractors.find(sub => sub.ObjectID === each.OrganizationREF)?.Name}", Work Type: "${allWorkTypes.find(wt => wt.ObjectID === each.WorkTypeCategoryREF)?.Name}"`
             }).join('\n')}`
         )
     }
@@ -100,7 +100,7 @@ function CreateSubcontractors() {
     if(failedSubcontractorWorkSubTypes.length > 0) {
         throw new Error(`An error occured adding the following work subtypes to subcontractors: 
             ${failedSubcontractorWorkSubTypes.map(each => {
-                return `Subcontractor: "${createdSubcontractors.find(sub => sub.ObjectID === each.OrganizationREF)}", Work Subtype: "${allWorkSubtypes.find(st => st.ObjectID === each.WorkSubtypeCategoryREF)}`
+                return `Subcontractor: "${createdSubcontractors.find(sub => sub.ObjectID === each.OrganizationREF)?.Name}", Work Subtype: "${allWorkSubtypes.find(st => st.ObjectID === each.WorkSubtypeCategoryREF)?.Name}`
             }).join('\n')}`)
     }
     SpreadsheetApp.getUi().alert('All subcontractors created successfully!')
@@ -202,6 +202,10 @@ function _createSubcontractorCategories(categories: string[], token: string, bas
 }
 
 function _addSubcontractorWorkTypes(workTypePayloads: ISubconWorkTypePayload[], token: string, baseUrl: string) {
+    const failedSubcontractorWorkTypes: ISubconWorkTypePayload[] = []
+    if(workTypePayloads.length === 0) {
+        return failedSubcontractorWorkTypes
+    }
     const headers = createHeaders(token)
     const url = baseUrl + '/Resource/Organization/OrganizationWorkType'
     const batchOptions = workTypePayloads.map((payload) => ({
@@ -210,7 +214,6 @@ function _addSubcontractorWorkTypes(workTypePayloads: ISubconWorkTypePayload[], 
         method: 'post' as const,
         payload: JSON.stringify(payload)
     }))
-    const failedSubcontractorWorkTypes: ISubconWorkTypePayload[] = []
     try {
         const responses = UrlFetchApp.fetchAll(batchOptions)
         responses.forEach((response, index) => {

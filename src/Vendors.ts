@@ -55,7 +55,7 @@ function CreateVendors() {
     const {failedRows, createdVendors} = _createVendors(vendorData, token, baseUrl)
     if(failedRows.length > 0) {
         highlightRows(failedRows, 'red')
-        SpreadsheetApp.getUi().alert(`The following rows threw an error. Failed rows: ${failedRows.join(", ")}`)
+        SpreadsheetApp.getUi().alert(`The following failed to be created. Failed rows: ${failedRows.join(", ")}`)
     }
 
     const allMaterialCategories = getDBCategoryList('MaterialCategory', token, baseUrl)
@@ -92,25 +92,22 @@ function CreateVendors() {
             }
         })
     })
-    const failedMaterialCategories = _addVendorMaterialCategories()
-    
+    const failedMaterialCategories = _addVendorMaterialCategories(parentMaterialCategories, false, token, baseUrl)
+    if(failedMaterialCategories.length > 0) {
+        throw new Error(`The following vendors and material categories failed to be connected.
+            ${failedMaterialCategories.map(each => {
+                return `Vendor: "${createdVendors.find(vend => vend.ObjectID === each.OrganizationREF)?.Name}", MaterialCategory: "${allMaterialCategories.find(matCat => each.MaterialCategoryREF === matCat.ObjectID)?.Name}"`
+            }).join('\n')}`)
+    }
+        
+    const failedMaterialSubcategories = _addVendorMaterialCategories(subMaterialCategories, true, token, baseUrl)
+    if(failedMaterialSubcategories.length > 0) {
+        throw new Error(`The following vendors and material subcategories failed to be connected.
+            ${failedMaterialCategories.map(each => {
+                return `Vendor: "${createdVendors.find(vend => vend.ObjectID === each.OrganizationREF)?.Name}", MaterialSubcategory: "${allMaterialSubcategories.find(matCat => each.MaterialSubcategoryREF === matCat.ObjectID)?.Name}"`
+            }).join('\n')}`)
+    }
     SpreadsheetApp.getUi().alert("All rows were created successfully.")
-    
-    // If there are material categories that don't already exist in the database, we have to create them before creating the vendors and attaching the categories.
-    // This should be done first because the result of "createModal" cannot be awaited and we would have to retrieve all the vendor ids from the db in another call. Prevents another db call.
-    // if(materialCategories.size > 0) {
-    //     createMaterialCategoryModal(Array.from(materialCategories), parentMaterialCategories.map(each => each.Name))
-    // } else {
-        // Skip the create material category step and go straight to creating vendors.
-
-    // }
-    // const {failedCategories: failedMaterialCategories, createdCategories: createdMaterialCategories} = _createMaterialCategories(Array.from(materialCategories), token, baseUrl)
-    // if(failedMaterialCategories.length > 0) {
-    //     throw new Error(`Script failed while creating the following material categories: ${createdMaterialCategories.join(', ')}`)
-    // }
-
-
-    
 }
 function _createVendorCategories(vendorCategories: string[], token: string, baseUrl: string) {
     const url = baseUrl + `/Resource/Category/VendorCategory`
@@ -197,8 +194,9 @@ function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
 }
 
 function _addVendorMaterialCategories(payloads: IVendorMaterialPayload[], isSubCat: boolean, token: string, baseUrl: string) {
+    const failedMaterialCategories: IVendorMaterialPayload[] = []
     if(payloads.length === 0) {
-        return
+        return failedMaterialCategories
     }
     const url = baseUrl + "/Resource/Organization" + isSubCat ? "/OrganizationMaterialSubcategory" : "/OrganizationMaterialCategory"
     const headers = createHeaders(token)
@@ -208,12 +206,25 @@ function _addVendorMaterialCategories(payloads: IVendorMaterialPayload[], isSubC
         method: "post" as const,
         payload: JSON.stringify(payload)
     }))
-    // No need to try catch because errors will be caught in _createVendors
-    const responses = UrlFetchApp.fetchAll(batchOptions)
-    responses.forEach((response, index) => {
-        const responseCode = response.getResponseCode()
-        
-    })
+    try {
+        const responses = UrlFetchApp.fetchAll(batchOptions)
+        responses.forEach((response, index) => {
+            const responseCode = response.getResponseCode()
+            if(responseCode >= 400 && responseCode !== 409) {
+                Logger.log(`An error occured adding material ${isSubCat ? 'subcategory': 'category'} with id: ${isSubCat ? payloads[index].MaterialSubcategoryREF: payloads[index].MaterialCategoryREF} to organization with id: ${payloads[index].OrganizationREF}`)
+                failedMaterialCategories.push(payloads[index])
+            } else if (responseCode === 409 || responseCode === 200) {
+                Logger.log(`Vendor with id: ${payloads[index].OrganizationREF} already has material ${isSubCat ? 'subcategory': 'category'} with id: ${isSubCat ? payloads[index].MaterialSubcategoryREF : payloads[index].MaterialCategoryREF} attached.`)
+            } else {
+                Logger.log(`Material ${isSubCat ? 'subcategory': 'category'} with id: ${isSubCat ? payloads[index].MaterialSubcategoryREF : payloads[index].MaterialCategoryREF} successfully added to vendor with id: ${payloads[index].OrganizationREF}`)
+            }
+            
+        })
+        return failedMaterialCategories
+    } catch (err) {
+        Logger.log(`An unexpected error occured adding material ${isSubCat ? 'subcategory': 'category'} to vendors. Error: ${err}`)
+        throw new Error(`An unexpected error occured adding material ${isSubCat ? 'subcategory': 'category'} to vendors. See logs for details.`)
+    }
 }
 
 
