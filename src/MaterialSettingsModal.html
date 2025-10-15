@@ -1,38 +1,39 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <base target="_top">
-    </head>
-    <body>
-        <h2>Please select the default System of Measure</h2>
-        <form id="material-system-of-measure" onsubmit="handleSubmit(this)">
-            <div style="display: flex; flex-direction: column;">
-                <input id="imperial" type="radio" value="imperial" name="umSystem"/>
-                <label for="imperial">Imperial</label>
-                <input id="metric" type="radio" value="metric" name="umSystem" />
-                <label for="metric">Metric</label>
-            </div>
-            <button id="submit" type="submit" form="material-system-of-measure" >Submit</button>
-        </form>
-    </body>
-    <script>
-        function preventFormSubmit() {
-          var forms = document.querySelectorAll('form');
-          for (var i = 0; i < forms.length; i++) {
-            forms[i].addEventListener('submit', function(event) {
-              event.preventDefault();
-            });
-          }
-        }
-        window.addEventListener('load', preventFormSubmit);
 
-        function handleSubmit(formElement) {
-            const umSystem = formElement.querySelector('input[name="umSystem"]:checked').value
-            console.log(umSystem)
-            console.log(formElement)
-            google.script.run.CreateMaterials(umSystem)
-            setTimeout(google.script.host.close, 1000)
-            
+<head>
+    <base target="_top">
+</head>
+
+<body>
+    <h2>Please select the default System of Measure</h2>
+    <form id="material-system-of-measure" onsubmit="handleSubmit(this)">
+        <div style="display: flex; flex-direction: column;">
+            <input id="imperial" type="radio" value="imperial" name="umSystem" />
+            <label for="imperial">Imperial</label>
+            <input id="metric" type="radio" value="metric" name="umSystem" />
+            <label for="metric">Metric</label>
+        </div>
+        <button id="submit" type="submit" form="material-system-of-measure">Submit</button>
+    </form>
+</body>
+<script>
+    function preventFormSubmit() {
+        var forms = document.querySelectorAll('form');
+        for (var i = 0; i < forms.length; i++) {
+            forms[i].addEventListener('submit', function (event) {
+                event.preventDefault();
+            });
         }
-    </script>
+    }
+    window.addEventListener('load', preventFormSubmit);
+
+    function handleSubmit(formElement) {
+        const umSystem = formElement.querySelector('input[name="umSystem"]:checked').value
+        google.script.run.CreateMaterials(umSystem)
+        setTimeout(google.script.host.close, 1000)
+
+    }
+</script>
+
 </html>

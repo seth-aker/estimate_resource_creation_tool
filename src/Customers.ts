@@ -45,39 +45,42 @@ function CreateCustomers() {
   }
 }
 function _createCustomers(customerData: ICustomer[], token: string, baseUrl: string) {
-   const headers = {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }
+  const headers = createHeaders(token)
   const url = baseUrl + '/Resource/Organization/Customer'
   const failedRows: number[] = [];
   const batchOptions = customerData.map((row) => ({
     url,
     headers,
     method: 'post' as const,
-    payload: JSON.stringify(row)
+    payload: JSON.stringify(row),
+    muteHttpExceptions: true
   }))
   try {
     const responses = UrlFetchApp.fetchAll(batchOptions)
     responses.forEach((response, index) => {
-      if(response.getResponseCode() !== 201) {
-        Logger.log(`Row ${index + 2}: Failed with status code ${response.getResponseCode()}`)
+      const responseCode = response.getResponseCode()
+      if(responseCode >= 400 && responseCode === 409) {
+        Logger.log(`Row ${index + 2}: Customer "${customerData[index].Name}" failed with status code ${response.getResponseCode()}. Error: ${response.getContentText()}`)
         failedRows.push(index + 2)
+      } else if(responseCode === 409 || responseCode === 200) {
+        Logger.log(`Row ${index +2}: Customer "${customerData[index]}" already existed in the database.`)
+      } else {
+        Logger.log(`Customer: "${customerData[index]}" successfully created`)
       }
     })
   } catch (err) {
     Logger.log(err)
-    throw err
+    throw new Error("An unexpected error occured creating customer categories. See logs for more details.")
   }
   return failedRows
 }
 function _createCustomerCategories(categories: string[], token: string, baseUrl: string) {
-  const url = baseUrl + `/Resource/Category/CustomerCategory`
-  const headers = {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }
   const failedCategories: string[] = []
+  if(categories.length === 0) {
+    return failedCategories
+  }
+  const url = baseUrl + `/Resource/Category/CustomerCategory`
+  const headers = createHeaders(token)
 
   const batchOptions = categories.map((categoryName) => {
     const payload = {
@@ -88,7 +91,8 @@ function _createCustomerCategories(categories: string[], token: string, baseUrl:
       url,
       method: 'post' as const,
       headers,
-      payload: JSON.stringify(payload)
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
     }
     return options
   }) 
@@ -96,14 +100,18 @@ function _createCustomerCategories(categories: string[], token: string, baseUrl:
     const responses = UrlFetchApp.fetchAll(batchOptions)
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
-      if(responseCode !== 201 && responseCode !== 200 && responseCode !== 409) {
-        Logger.log(`Category: "${categories[index]}" failed to create with status code ${responseCode}`)
+      if(responseCode >= 400 && responseCode !== 409) {
+        Logger.log(`Customer Category: "${categories[index]}" failed to create with status code ${responseCode}. Error: ${response.getContentText()}`)
         failedCategories.push(categories[index])
+      } else if (responseCode === 409 || responseCode === 200) {
+        Logger.log(`Customer Category: "${categories[index]}" already existed in the database.`)
+      } else {
+        Logger.log(`Customer category: "${categories[index]}" successfully created`)
       }
     })
   } catch (err) {
     Logger.log(err)
-    throw err
+    throw new Error(`An unexpected error occured creating customer categories. See logs for more details.`)
   }
   return failedCategories
 }
