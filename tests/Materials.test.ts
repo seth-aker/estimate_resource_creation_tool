@@ -48,19 +48,19 @@ describe('Materials', () => {
         ImperialUnitOfMeasure: "TON",
         MetricUnitOfMeasure: "MT",
         BaseCost: mockMaterialRow.BaseCost,
-        BaseCostSystemOfMeasure: 'imperial',
+        BaseCostSystemOfMeasure: 'Imperial',
         IsTemporaryMaterial: mockMaterialRow.IsTemporaryMaterial,
         TaxPercent: mockMaterialRow.TaxPercent,
         WastePercent: mockMaterialRow.WastePercent,
         TruckingCost: mockMaterialRow.TruckingCost,
-        TruckingCostSystemOfMeasure: 'imperial',
+        TruckingCostSystemOfMeasure: 'Imperial',
         JobCostIDCode: mockMaterialRow.JobCostIDCode,
         Notes: mockMaterialRow.Notes,
         ShouldRoundQuantity: mockMaterialRow.ShouldRoundQuantity,
         QuantityRoundingIncrement: mockMaterialRow.QuantityRoundingIncrement,
-        QuantityRoundingIncrementSystemOfMeasure: 'imperial'
+        QuantityRoundingIncrementSystemOfMeasure: 'Imperial'
       }
-      const createdDTO = gLib.createMaterialDTO(mockMaterialRow, 'imperial')
+      const createdDTO = gLib.createMaterialDTO(mockMaterialRow, 'Imperial')
 
       expect(createdDTO).toEqual(expectedDTO)
     })
@@ -88,19 +88,19 @@ describe('Materials', () => {
         ImperialUnitOfMeasure: "EACH",
         MetricUnitOfMeasure: "EACH",
         BaseCost: mockMaterialRow.BaseCost,
-        BaseCostSystemOfMeasure: 'imperial',
+        BaseCostSystemOfMeasure: 'Imperial',
         IsTemporaryMaterial: mockMaterialRow.IsTemporaryMaterial,
         TaxPercent: mockMaterialRow.TaxPercent,
         WastePercent: mockMaterialRow.WastePercent,
         TruckingCost: mockMaterialRow.TruckingCost,
-        TruckingCostSystemOfMeasure: 'imperial',
+        TruckingCostSystemOfMeasure: 'Imperial',
         JobCostIDCode: mockMaterialRow.JobCostIDCode,
         Notes: mockMaterialRow.Notes,
         ShouldRoundQuantity: mockMaterialRow.ShouldRoundQuantity,
         QuantityRoundingIncrement: mockMaterialRow.QuantityRoundingIncrement,
-        QuantityRoundingIncrementSystemOfMeasure: 'imperial'
+        QuantityRoundingIncrementSystemOfMeasure: 'Imperial'
       }
-      const createdDTO = gLib.createMaterialDTO(mockMaterialRow, 'imperial')
+      const createdDTO = gLib.createMaterialDTO(mockMaterialRow, 'Imperial')
 
       expect(createdDTO).toEqual(expectedDTO)
     })
@@ -128,19 +128,19 @@ describe('Materials', () => {
         ImperialUnitOfMeasure: "LF",
         MetricUnitOfMeasure: "m",
         BaseCost: mockMaterialRow.BaseCost,
-        BaseCostSystemOfMeasure: 'metric',
+        BaseCostSystemOfMeasure: 'Metric',
         IsTemporaryMaterial: mockMaterialRow.IsTemporaryMaterial,
         TaxPercent: mockMaterialRow.TaxPercent,
         WastePercent: mockMaterialRow.WastePercent,
         TruckingCost: mockMaterialRow.TruckingCost,
-        TruckingCostSystemOfMeasure: 'metric',
+        TruckingCostSystemOfMeasure: 'Metric',
         JobCostIDCode: mockMaterialRow.JobCostIDCode,
         Notes: mockMaterialRow.Notes,
         ShouldRoundQuantity: mockMaterialRow.ShouldRoundQuantity,
         QuantityRoundingIncrement: mockMaterialRow.QuantityRoundingIncrement,
-        QuantityRoundingIncrementSystemOfMeasure: 'metric'
+        QuantityRoundingIncrementSystemOfMeasure: 'Metric'
       }
-      const createdDTO = gLib.createMaterialDTO(mockMaterialRow, 'metric')
+      const createdDTO = gLib.createMaterialDTO(mockMaterialRow, 'Metric')
       expect(createdDTO).toEqual(expectedDTO)
     })
   })
@@ -153,17 +153,17 @@ describe('Materials', () => {
       ImperialUnitOfMeasure: 'EACH',
       MetricUnitOfMeasure: 'EACH',
       BaseCost: 10,
-      BaseCostSystemOfMeasure: 'imperial',
+      BaseCostSystemOfMeasure: 'Imperial',
       IsTemporaryMaterial: false,
       TaxPercent: 0.05,
       WastePercent: 0.1,
       TruckingCost: 0,
-      TruckingCostSystemOfMeasure: 'imperial',
+      TruckingCostSystemOfMeasure: 'Imperial',
       JobCostIDCode: 'JCID',
       Notes: 'Note',
       ShouldRoundQuantity: false,
       QuantityRoundingIncrement: undefined,
-      QuantityRoundingIncrementSystemOfMeasure: 'imperial'
+      QuantityRoundingIncrementSystemOfMeasure: 'Imperial'
     }
     const mockMaterialDTO2: IMaterialDTO = {
       EstimateREF: ESTIMATE_REF,
@@ -173,17 +173,17 @@ describe('Materials', () => {
       ImperialUnitOfMeasure: 'LF',
       MetricUnitOfMeasure: 'm',
       BaseCost: 10,
-      BaseCostSystemOfMeasure: 'imperial',
+      BaseCostSystemOfMeasure: 'Imperial',
       IsTemporaryMaterial: false,
       TaxPercent: 0.05,
       WastePercent: 0.1,
       TruckingCost: 0,
-      TruckingCostSystemOfMeasure: 'imperial',
+      TruckingCostSystemOfMeasure: 'Imperial',
       JobCostIDCode: 'JCID',
       Notes: 'Note',
       ShouldRoundQuantity: true,
       QuantityRoundingIncrement: 1,
-      QuantityRoundingIncrementSystemOfMeasure: 'imperial'
+      QuantityRoundingIncrementSystemOfMeasure: 'Imperial'
     }
     it('correctly returns failed materials when the response codes are error codes', () => {
       const expectedBatchOptions = [mockMaterialDTO, mockMaterialDTO2].map((each) => ({
@@ -275,8 +275,8 @@ describe('Materials', () => {
     })
     it('exits early when there is no material data', () => {
       mockGetSpreadSheetData.mockReturnValue([])
-      gLib.CreateMaterials('imperial')
-      expect(mockLogger.log).toHaveBeenCalledWith('CreateMaterials() failed to run because there was no data to send.')
+      gLib.CreateMaterials('Imperial')
+      expect(mockLogger.log).toHaveBeenCalledWith('CreateMaterials() failed to run because there was no valid data to send.')
       expect(mockUi.alert).toHaveBeenCalledWith('No data to send!')
       expect(mockCreateMaterialDTO).not.toHaveBeenCalled()
       expect(mockCreateMaterials).not.toHaveBeenCalled()
@@ -306,23 +306,23 @@ describe('Materials', () => {
         ImperialUnitOfMeasure: "TON",
         MetricUnitOfMeasure: "MT",
         BaseCost: mockMaterialRow.BaseCost,
-        BaseCostSystemOfMeasure: 'imperial',
+        BaseCostSystemOfMeasure: 'Imperial',
         IsTemporaryMaterial: mockMaterialRow.IsTemporaryMaterial,
         TaxPercent: mockMaterialRow.TaxPercent,
         WastePercent: mockMaterialRow.WastePercent,
         TruckingCost: mockMaterialRow.TruckingCost,
-        TruckingCostSystemOfMeasure: 'imperial',
+        TruckingCostSystemOfMeasure: 'Imperial',
         JobCostIDCode: mockMaterialRow.JobCostIDCode,
         Notes: mockMaterialRow.Notes,
         ShouldRoundQuantity: mockMaterialRow.ShouldRoundQuantity,
         QuantityRoundingIncrement: mockMaterialRow.QuantityRoundingIncrement,
-        QuantityRoundingIncrementSystemOfMeasure: 'imperial'
+        QuantityRoundingIncrementSystemOfMeasure: 'Imperial'
       }
       mockGetSpreadSheetData.mockReturnValue([mockMaterialRow])
       mockCreateMaterialDTO.mockReturnValue(mockMaterialDTO)
       mockCreateMaterials.mockReturnValue({failedMaterials: [2], createdMaterials: []})
-      gLib.CreateMaterials('imperial')
-      expect(mockCreateMaterialDTO).toHaveBeenCalledExactlyOnceWith(mockMaterialRow, 'imperial')
+      gLib.CreateMaterials('Imperial')
+      expect(mockCreateMaterialDTO).toHaveBeenCalledExactlyOnceWith(mockMaterialRow, 'Imperial')
       expect(mockCreateMaterials).toHaveBeenCalledWith([mockMaterialDTO], mockToken, mockBaseUrl)
       expect(mockHighlightRows).toHaveBeenCalledWith([2], 'red')
       expect(mockUi.alert).toHaveBeenCalledWith("Some materials failed to be created at Rows: 2")
@@ -351,23 +351,23 @@ describe('Materials', () => {
         ImperialUnitOfMeasure: "TON",
         MetricUnitOfMeasure: "MT",
         BaseCost: mockMaterialRow.BaseCost,
-        BaseCostSystemOfMeasure: 'imperial',
+        BaseCostSystemOfMeasure: 'Imperial',
         IsTemporaryMaterial: mockMaterialRow.IsTemporaryMaterial,
         TaxPercent: mockMaterialRow.TaxPercent,
         WastePercent: mockMaterialRow.WastePercent,
         TruckingCost: mockMaterialRow.TruckingCost,
-        TruckingCostSystemOfMeasure: 'imperial',
+        TruckingCostSystemOfMeasure: 'Imperial',
         JobCostIDCode: mockMaterialRow.JobCostIDCode,
         Notes: mockMaterialRow.Notes,
         ShouldRoundQuantity: mockMaterialRow.ShouldRoundQuantity,
         QuantityRoundingIncrement: mockMaterialRow.QuantityRoundingIncrement,
-        QuantityRoundingIncrementSystemOfMeasure: 'imperial'
+        QuantityRoundingIncrementSystemOfMeasure: 'Imperial'
       }
       mockGetSpreadSheetData.mockReturnValue([mockMaterialRow])
       mockCreateMaterialDTO.mockReturnValue(mockMaterialDTO)
       mockCreateMaterials.mockReturnValue({failedMaterials: [], createdMaterials: [mockMaterialDTO]})
-      gLib.CreateMaterials('imperial')
-      expect(mockCreateMaterialDTO).toHaveBeenCalledExactlyOnceWith(mockMaterialRow, 'imperial')
+      gLib.CreateMaterials('Imperial')
+      expect(mockCreateMaterialDTO).toHaveBeenCalledExactlyOnceWith(mockMaterialRow, 'Imperial')
       expect(mockCreateMaterials).toHaveBeenCalledWith([mockMaterialDTO], mockToken, mockBaseUrl)
       expect(mockUi.alert).toHaveBeenCalledWith('All materials successfully created!')
     })

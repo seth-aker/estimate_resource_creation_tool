@@ -1,4 +1,4 @@
-interface ICustomer {
+interface ICustomer extends Record<string, TSpreadsheetValues | undefined> {
     Name: string, 
     Address1?: string,
     Address2?: string,
@@ -13,7 +13,6 @@ interface ICustomer {
     Notes?: string,
     JobCostIDCode?: string,
     AccountingNumber?: string
-    // TODO: Fill this with the rest of the rows
 }
 function CreateCustomers() {
 
@@ -22,14 +21,14 @@ function CreateCustomers() {
 
     // Check if no data and quit
   if (!customerData || customerData.length === 0) {
-    Logger.log("No data to send!");
+    Logger.log("CreateCustomers() failed to run because there was no data to send.");
     SpreadsheetApp.getUi().alert('No data to send!');
     return;
   }
   const customerCategories = new Set<string>()
   customerData.forEach((row) => {
     if(row.Category) {
-      customerCategories.add(row.Category)
+      customerCategories.add(row.Category.toString())
     }
   })
   const failedCategories = _createCustomerCategories(Array.from(customerCategories), token, baseUrl)
@@ -48,24 +47,32 @@ function _createCustomers(customerData: ICustomer[], token: string, baseUrl: str
   const headers = createHeaders(token)
   const url = baseUrl + '/Resource/Organization/Customer'
   const failedRows: number[] = [];
-  const batchOptions = customerData.map((row) => ({
-    url,
-    headers,
-    method: 'post' as const,
-    payload: JSON.stringify(row),
-    muteHttpExceptions: true
-  }))
+  const batchOptions = customerData.map((row) => {
+    // Ensure all values are strings before sending to the server.
+    Object.keys(row).forEach((key) => {
+      if(row[key]) {
+        row[key] = String(row[key])
+      }
+    })
+    return {
+      url,
+      headers,
+      method: 'post' as const,
+      payload: JSON.stringify(row),
+      muteHttpExceptions: true
+    }
+  })
   try {
     const responses = UrlFetchApp.fetchAll(batchOptions)
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
-      if(responseCode >= 400 && responseCode === 409) {
-        Logger.log(`Row ${index + 2}: Customer "${customerData[index].Name}" failed with status code ${response.getResponseCode()}. Error: ${response.getContentText()}`)
+      if(responseCode >= 400 && responseCode !== 409) {
+        Logger.log(`Row ${index + 2}: Customer "${customerData[index].Name}" failed with status code ${responseCode}. Error: ${response.getContentText()}`)
         failedRows.push(index + 2)
       } else if(responseCode === 409 || responseCode === 200) {
-        Logger.log(`Row ${index +2}: Customer "${customerData[index]}" already existed in the database.`)
+        Logger.log(`Row ${index +2}: Customer "${customerData[index].Name}" already existed in the database.`)
       } else {
-        Logger.log(`Customer: "${customerData[index]}" successfully created`)
+        Logger.log(`Customer: "${customerData[index].Name}" successfully created`)
       }
     })
   } catch (err) {
@@ -106,7 +113,7 @@ function _createCustomerCategories(categories: string[], token: string, baseUrl:
       } else if (responseCode === 409 || responseCode === 200) {
         Logger.log(`Customer Category: "${categories[index]}" already existed in the database.`)
       } else {
-        Logger.log(`Customer category: "${categories[index]}" successfully created`)
+        Logger.log(`Customer Category: "${categories[index]}" successfully created`)
       }
     })
   } catch (err) {

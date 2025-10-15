@@ -1,4 +1,4 @@
-type TSystemOfMeasure = "imperial" | "metric"
+type TSystemOfMeasure = "Imperial" | "Metric"
 interface IMaterialRow {
     Name: string,
     Category?: string,
@@ -29,9 +29,9 @@ function AskForSystemUM() {
 }
 function CreateMaterials(systemOfMeasure: TSystemOfMeasure) {
     const {token, baseUrl} = authenticate()
-    const materialData = getSpreadSheetData<IMaterialRow>("Materials")
+    const materialData = getSpreadSheetData<IMaterialRow>("Materials").filter((row) => row.Name && row["Unit of Measure"])
     if(!materialData || materialData.length === 0) {
-        Logger.log("CreateMaterials() failed to run because there was no data to send.");
+        Logger.log("CreateMaterials() failed to run because there was no valid data to send.");
         SpreadsheetApp.getUi().alert('No data to send!');
         return;
     }
@@ -86,7 +86,7 @@ function createMaterialDTO(materialRow: IMaterialRow, systemOfMeasure: TSystemOf
     const um = materialRow["Unit of Measure"]
     let impUM: string 
     let metricUM: string
-    if(systemOfMeasure === 'imperial') {
+    if(systemOfMeasure === 'Imperial') {
         impUM = um
         // If the conversion object has the UM key from "material row", then return the abbreviation of the metric UM that is associated with the imperial unit
         // Else return the UM in the material row 
