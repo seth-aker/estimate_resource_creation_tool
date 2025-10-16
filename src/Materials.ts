@@ -1,5 +1,5 @@
 type TSystemOfMeasure = "Imperial" | "Metric"
-interface IMaterialRow {
+interface IMaterialRow extends Record<string, TSpreadsheetValues | undefined> {
     Name: string,
     Category?: string,
     Subcategory?: string,
@@ -96,7 +96,7 @@ function createMaterialDTO(materialRow: IMaterialRow, systemOfMeasure: TSystemOf
         metricUM = um;
         impUM = Object.keys(SYS_OF_MEASURE_CONVERSION.metric_to_imp).includes(um) ? SYS_OF_MEASURE_CONVERSION.metric_to_imp[um] : um
     }
-    return {
+    const dto: IMaterialDTO = {
         EstimateREF: ESTIMATE_REF,
         Name: materialRow.Name,
         Category: materialRow.Category,
@@ -115,5 +115,12 @@ function createMaterialDTO(materialRow: IMaterialRow, systemOfMeasure: TSystemOf
         ShouldRoundQuantity: materialRow.ShouldRoundQuantity,
         QuantityRoundingIncrement: materialRow.QuantityRoundingIncrement,
         QuantityRoundingIncrementSystemOfMeasure: systemOfMeasure
-    } as IMaterialDTO
+    } 
+    // Some values were being sent over to the api as blank strings and estimate was throwing a fit. This removes those keys.
+    Object.keys(dto).forEach((key) => {
+        if(dto[key] === undefined || dto[key] === '') {
+            delete dto[key]
+        }
+    })
+    return dto
 }

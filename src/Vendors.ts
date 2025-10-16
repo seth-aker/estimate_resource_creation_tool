@@ -27,6 +27,7 @@ interface IVendorMaterialPayload {
 function CreateVendors() {
     const {token, baseUrl} = authenticate()
     const vendorData = getSpreadSheetData<IVendorRow>('Vendors');
+    
     if (!vendorData || vendorData.length === 0) {
         Logger.log("No data to send!");
         SpreadsheetApp.getUi().alert('No data to send!');
@@ -124,7 +125,8 @@ function _createVendorCategories(vendorCategories: string[], token: string, base
             url,
             method: 'post' as const,
             headers,
-            payload: JSON.stringify(payload)
+            payload: JSON.stringify(payload),
+            muteHttpExceptions: true
         }
         return options
     }) 
@@ -167,7 +169,8 @@ function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
             url,
             method: 'post' as const,
             headers,
-            payload: JSON.stringify(payload)
+            payload: JSON.stringify(payload),
+            muteHttpExceptions: true
         }
         return options
     })
@@ -176,17 +179,22 @@ function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
-                Logger.log(`Row ${index + 2}: Failed with status code ${responseCode}`)
+                Logger.log(`Row ${index + 2}: Vendor "${vendors[index].Name}" failed with status code ${responseCode}. Error: ${response.getContentText()}`)
                 failedRows.push(index + 2)
             } else if(responseCode === 200 || responseCode === 409) {
-                Logger.log(`Row ${index + 2}: Vendor with name "${vendors[index].Name}" and city "${vendors[index].City}" already exists`)
+                Logger.log(`Row ${index + 2}: Vendor with name "${vendors[index].Name}" already exists`)
                 vendorsToGet.push({Name: vendors[index].Name, City: vendors[index].City})
             } else {
-                Logger.log(`Vendor with name "${vendors[index].Name}" and city "${vendors[index].City}" successfully created`)
+                Logger.log(`Row ${index + 2}: Vendor with name "${vendors[index].Name}" successfully created`)
                 createdVendors.push(JSON.parse(response.getContentText()).Item)
             }
         })
-        return {failedRows, createdVendors: createdVendors}
+        if(vendorsToGet.length > 0) {
+            const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${vendorsToGet.map((each) => `(Name eq '${each.Name}' and City eq '${each.City}')`).join(' or ')})`
+            const existingVendors = getOrganization('Vendor', token, baseUrl, query)
+            createdVendors.push(...existingVendors)
+        }
+        return {failedRows, createdVendors}
     } catch (err) {
         Logger.log(`An unexpected error occured creating vendors. Error: ${err}`)
         throw new Error(`An unexpected error occured creating vendors. See logs for more details.`)
@@ -198,20 +206,21 @@ function _addVendorMaterialCategories(payloads: IVendorMaterialPayload[], isSubC
     if(payloads.length === 0) {
         return failedMaterialCategories
     }
-    const url = baseUrl + "/Resource/Organization" + isSubCat ? "/OrganizationMaterialSubcategory" : "/OrganizationMaterialCategory"
+    const url = `${baseUrl}/Resource/Organization${isSubCat ? "/OrganizationMaterialSubcategory" : "/OrganizationMaterialCategory"}`
     const headers = createHeaders(token)
     const batchOptions = payloads.map(payload => ({
         url,
         headers,
         method: "post" as const,
-        payload: JSON.stringify(payload)
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
     }))
     try {
         const responses = UrlFetchApp.fetchAll(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
-                Logger.log(`An error occured adding material ${isSubCat ? 'subcategory': 'category'} with id: ${isSubCat ? payloads[index].MaterialSubcategoryREF: payloads[index].MaterialCategoryREF} to organization with id: ${payloads[index].OrganizationREF}`)
+                Logger.log(`An error occured adding material ${isSubCat ? 'subcategory': 'category'} with id: ${isSubCat ? payloads[index].MaterialSubcategoryREF: payloads[index].MaterialCategoryREF} to organization with id: ${payloads[index].OrganizationREF}. Error: ${response.getContentText()}`)
                 failedMaterialCategories.push(payloads[index])
             } else if (responseCode === 409 || responseCode === 200) {
                 Logger.log(`Vendor with id: ${payloads[index].OrganizationREF} already has material ${isSubCat ? 'subcategory': 'category'} with id: ${isSubCat ? payloads[index].MaterialSubcategoryREF : payloads[index].MaterialCategoryREF} attached.`)

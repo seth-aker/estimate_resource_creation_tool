@@ -1,7 +1,7 @@
 {
 	"scripts": {
 		"test": "pnpm run build && vitest",
-		"clean": "rimraf ./dist/",
+		"clean": "rimraf --glob dist/*",
 		"build": "pnpm run clean && tsc -b ./tsconfig.build.json && copy appsscript.json dist\\ && copy src\\*.html dist\\",
 		"push": "pnpm run build && pnpm clasp push"
 	},
