@@ -1,6 +1,6 @@
-import { vi, describe, it, beforeEach, expect} from 'vitest'
+import { vi, describe, it, beforeEach, expect, beforeAll} from 'vitest'
 import gas from 'gas-local'
-import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUrlFetchApp } from './mocks'
+import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp } from './mocks'
 
 // const mockGetDBCategoryList = vi.fn()
 // const mockGetDBSubcategoryList = vi.fn()
@@ -184,6 +184,106 @@ describe('Vendors', () => {
       expect(mockLogger.log).nthCalledWith(2, 'Row 3: Vendor with name "mockVendor2" already exists')
       expect(mockLogger.log).nthCalledWith(3, 'Row 4: Vendor with name "mockVendor3" successfully created')
       expect(gLib.getOrganization).toHaveBeenCalledWith('Vendor', mockToken, mockBaseUrl, expectedQuery)
+    })
+  })
+  describe('_createVendorCategories', () => {
+    beforeAll(() => {
+      gLib.getDBCategoryList = vi.fn()
+    })
+    const mockVendorCategories = ['cat1', 'cat2', 'cat3']
+    it('returns empty categories when an empty array is passed to it', () => {
+      const {failedVendorCategories, createdVendorCategores} = gLib._createVendorCategories([], mockToken, mockBaseUrl)
+      expect(failedVendorCategories).toEqual([])
+      expect(createdVendorCategores).toEqual([])
+      expect(mockUrlFetchApp.fetchAll).not.toHaveBeenCalled()
+    })
+    it('returns failed categories when response codes are errors and logs the errors properly', () => {
+      mockUrlFetchApp.fetchAll.mockReturnValue([
+        { getResponseCode: () => 400, getContentText: () => "Error"},
+        { getResponseCode: () => 500, getContentText: () => 'Error'},
+        { getResponseCode: () => 201, getContentText: () => (JSON.stringify({ Item: 'Cat3Response Object'}))}
+      ])
+      const {failedVendorCategories, createdVendorCategores} = gLib._createVendorCategories(mockVendorCategories, mockToken, mockBaseUrl)
+
+      expect(failedVendorCategories).toEqual(['cat1', 'cat2'])
+      expect(createdVendorCategores).toEqual(['Cat3Response Object'])
+      expect(mockLogger.log).nthCalledWith(1, 'Vendor Category: "cat1" failed to create with status code 400. Error: Error')
+      expect(mockLogger.log).nthCalledWith(2, 'Vendor Category: "cat2" failed to create with status code 500. Error: Error')
+      expect(mockLogger.log).nthCalledWith(3, 'Vendor Category: "cat3" successfully created')
+    })
+    it('returns no failed categories when response is 409 and fetches pre-existing categories', () => {
+      mockUrlFetchApp.fetchAll.mockReturnValue([
+        { getResponseCode: () => 409 },
+        { getResponseCode: () => 200 },
+        { getResponseCode: () => 201, getContentText: () => (JSON.stringify({ Item: 'Cat3Response Object'}))}
+      ])
+      gLib.getDBCategoryList.mockReturnValue(['Cat1Response Object', 'Cat2Response Object'])
+      
+      const {failedVendorCategories, createdVendorCategores} = gLib._createVendorCategories(mockVendorCategories, mockToken, mockBaseUrl)
+
+      expect(failedVendorCategories).toEqual([])
+      expect(createdVendorCategores).toEqual(['Cat3Response Object', 'Cat1Response Object', 'Cat2Response Object'])
+      const expectedQuery = "?$filter=EstimateREF eq 00000000-0000-0000-0000-000000000000 and (Name eq 'cat1' or Name eq 'cat2')"
+      expect(gLib.getDBCategoryList).toHaveBeenCalledWith('VendorCategory', mockToken, mockBaseUrl, expectedQuery)
+      expect(mockLogger.log).nthCalledWith(1, 'Vendor Category: "cat1" already existed in the database.')
+      expect(mockLogger.log).nthCalledWith(2, 'Vendor Category: "cat2" already existed in the database.')
+      expect(mockLogger.log).nthCalledWith(3, 'Vendor Category: "cat3" successfully created')
+    })
+    it('returns with all successfully created vendor categories', () => {
+      mockUrlFetchApp.fetchAll.mockReturnValue([
+        { getResponseCode: () => 201, getContentText: () => (JSON.stringify({ Item: 'Cat1Response Object'}))},
+        { getResponseCode: () => 201, getContentText: () => (JSON.stringify({ Item: 'Cat2Response Object'}))},
+        { getResponseCode: () => 201, getContentText: () => (JSON.stringify({ Item: 'Cat3Response Object'}))}
+      ])
+      const {failedVendorCategories, createdVendorCategores } = gLib._createVendorCategories(mockVendorCategories, mockToken, mockBaseUrl)
+
+      expect(failedVendorCategories).toEqual([])
+      expect(createdVendorCategores).toEqual(['Cat1Response Object', 'Cat2Response Object', 'Cat3Response Object'])
+      expect(mockLogger.log).nthCalledWith(1, 'Vendor Category: "cat1" successfully created')
+      expect(mockLogger.log).nthCalledWith(2, 'Vendor Category: "cat2" successfully created')
+      expect(mockLogger.log).nthCalledWith(3, 'Vendor Category: "cat3" successfully created')
+    })
+  })
+  describe('CreateVendors', () => {
+    beforeAll(() => {
+      gLib.authenticate = vi.fn(() => ({token: mockToken, baseUrl: mockBaseUrl}))
+      gLib.getSpreadSheetData = vi.fn()
+      gLib._createVendorCategories = vi.fn(() => ({failedVendorCategories: []}))
+      gLib._createVendors = vi.fn()
+      gLib.getDBCategoryList = vi.fn(() => [])
+      gLib.getDBSubcategoryList = vi.fn(() => [])
+      gLib._addVendorMaterialCategories = vi.fn(() => [])
+    })
+    it('exits early when there is no data to send', () => {
+      gLib.getSpreadSheetData.mockReturnValue([])
+
+      gLib.CreateVendors()
+      expect(mockLogger.log).toHaveBeenCalledWith("CreateVendors() failed to run because there was no data to send.")
+      expect(mockUi.alert).toHaveBeenCalledWith('No data to send!')
+      expect(gLib._createVendorCategories).not.toHaveBeenCalled()
+    })
+    it('correctly calls _createVendorCategories when there are vendor categories to create', () => {
+      gLib.getSpreadSheetData.mockReturnValue([
+        {Name: 'mockVendor1',City: 'mockCity1', 'Vendor Category': 'VendorCategory1'},
+        { Name: 'mockVendor2', City: 'mockCity2', 'Vendor Category': 'VendorCategory2'},
+        { Name: 'mockVendor3', City: 'mockCity3', 'Vendor Category': 'VendorCategory1'}  ])
+      gLib._createVendors.mockReturnValue({ failedRows: [], createdVendors: []})
+      gLib.CreateVendors()
+      expect(gLib._createVendorCategories).toHaveBeenCalledWith(['VendorCategory1', 'VendorCategory2'], mockToken, mockBaseUrl)
+      expect(mockUi.alert).toHaveBeenCalledWith('All rows were created successfully.')
+    })
+    it('throws an error when _createVendorCategories returns with failed categories', () => {
+      gLib.getSpreadSheetData.mockReturnValue([
+        { Name: 'mockVendor1', City: 'mockCity1', 'Vendor Category': 'VendorCategory1'},
+        { Name: 'mockVendor2', City: 'mockCity2', 'Vendor Category': 'VendorCategory2'},
+        { Name: 'mockVendor3', City: 'mockCity3', 'Vendor Category': 'VendorCategory1'}  ])
+      gLib._createVendorCategories.mockReturnValue(['VendorCategory1', 'VendorCategory2'])
+
+      expect(() => gLib.CreateVendors()).toThrow('Script failed while creating the following vendor categories: VendorCategory1, VendorCategory2')
+      expect(gLib._createVendors).not.toHaveBeenCalled()
+    })
+    it('alerts the user of failed rows and highlights them in red', () => {
+      
     })
   })
 })

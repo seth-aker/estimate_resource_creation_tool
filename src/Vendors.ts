@@ -29,7 +29,7 @@ function CreateVendors() {
     const vendorData = getSpreadSheetData<IVendorRow>('Vendors');
     
     if (!vendorData || vendorData.length === 0) {
-        Logger.log("No data to send!");
+        Logger.log("CreateVendors() failed to run because there was no data to send.");
         SpreadsheetApp.getUi().alert('No data to send!');
         return;
     }
@@ -111,11 +111,17 @@ function CreateVendors() {
     SpreadsheetApp.getUi().alert("All rows were created successfully.")
 }
 function _createVendorCategories(vendorCategories: string[], token: string, baseUrl: string) {
+    const failedCategories: string[] = []
+    const createdCategories: ICategoryItem[] = []
+    if(vendorCategories.length === 0) {
+        return {
+            failedVendorCategories: failedCategories, 
+            createdVendorCategores: createdCategories
+        }
+    }
     const url = baseUrl + `/Resource/Category/VendorCategory`
     const headers = createHeaders(token)
-    const failedCategories: string[] = []
     const categoriesToGet: string[] = []
-    const createdCategories: ICategoryItem[] = []
     const batchOptions = vendorCategories.map((categoryName) => {
         const payload = {
             Name: categoryName,
@@ -138,13 +144,18 @@ function _createVendorCategories(vendorCategories: string[], token: string, base
                 Logger.log(`Vendor Category: "${vendorCategories[index]}" failed to create with status code ${responseCode}. Error: ${response.getContentText()}`)
                 failedCategories.push(vendorCategories[index])
             } else if (responseCode === 409 || responseCode === 200) {
-                Logger.log(`Vendor Category: ${vendorCategories[index]}" already existed in the database.`)
+                Logger.log(`Vendor Category: "${vendorCategories[index]}" already existed in the database.`)
                 categoriesToGet.push(vendorCategories[index])
             } else {
                 Logger.log(`Vendor Category: "${vendorCategories[index]}" successfully created`)
-                createdCategories.push(JSON.parse(response.getContentText()))
+                createdCategories.push(JSON.parse(response.getContentText()).Item)
             }
         })
+        if(categoriesToGet.length > 0) {
+            const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (Name eq '${categoriesToGet.join("' or Name eq '")}')`
+            const existingVendorCategories = getDBCategoryList('VendorCategory', token, baseUrl, query)
+            createdCategories.push(...existingVendorCategories)
+        }
     } catch (err) {
         Logger.log(`An unexpected error occured creating vendor categories. Error: ${err}`)
         throw new Error('An unexpected error occured creating vendor categories. Check the logs for more details.')

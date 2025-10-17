@@ -1,4 +1,4 @@
-type TUserVariables = {
+interface IUserVariables extends Record<string, string> {
   baseUrl: string,
   clientID: string,
   clientSecret: string,
@@ -11,6 +11,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('API Properties')
     .addItem('Set API Properties', 'requestUserProperties')
+    .addItem('View Current API Properties', 'viewUserProperties')
     .addItem('Clear API Properties', 'clearUserProperties')
     .addToUi()
 }
@@ -22,7 +23,11 @@ function clearUserProperties() {
   PropertiesService.getUserProperties().deleteAllProperties()
   SpreadsheetApp.getUi().alert("Database properties successfully deleted")
 }
-function setUserVariables(vars: TUserVariables) {
+function viewUserProperties() {
+  const props = PropertiesService.getUserProperties().getProperties() as IUserVariables
+  SpreadsheetApp.getUi().alert(`Current API Properties: \nBase URL: ${props.baseUrl}\nClientID: ${props.clientID}\nUsername: ${props.userName}\nServer Name: ${props.serverName}\nDatabase Name: ${props.dbName}`)
+}
+function setUserVariables(vars: IUserVariables) {
   try {
     PropertiesService.getUserProperties().setProperties(vars)
   } catch (err) {

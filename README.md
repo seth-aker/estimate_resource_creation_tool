@@ -1,4 +1,9 @@
 # Estimate Resource Creator
+Used in conjunction with Google Sheets and Google Apps Scripts to send resources to the B2W Estimate API. 
+
+It is highly recommended to make a copy of the production Google Sheets document and then use that to run your data uploads. Making a copy of the Google Sheet will also make a copy of the Apps Scripts.
+
+[Link to Google Sheet](https://docs.google.com/spreadsheets/d/1yFlKXRHQUA9BAhoyHMqvTS01vBfpw-quvw50pHnAl98/edit?usp=sharing)
 
 ### Setup
 ```bash
@@ -15,7 +20,7 @@ pnpm build
 
 ### Push to Production
 ```bash
-# Build and push combined 
+# Runs the build command and then pushes compiled files to the production repository using clasp.
 pnpm push
 ```
 
