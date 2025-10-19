@@ -253,6 +253,7 @@ describe('Vendors', () => {
       gLib.getDBCategoryList = vi.fn(() => [])
       gLib.getDBSubcategoryList = vi.fn(() => [])
       gLib._addVendorMaterialCategories = vi.fn(() => [])
+      gLib.highlightRows = vi.fn()
     })
     it('exits early when there is no data to send', () => {
       gLib.getSpreadSheetData.mockReturnValue([])
@@ -277,13 +278,121 @@ describe('Vendors', () => {
         { Name: 'mockVendor1', City: 'mockCity1', 'Vendor Category': 'VendorCategory1'},
         { Name: 'mockVendor2', City: 'mockCity2', 'Vendor Category': 'VendorCategory2'},
         { Name: 'mockVendor3', City: 'mockCity3', 'Vendor Category': 'VendorCategory1'}  ])
-      gLib._createVendorCategories.mockReturnValue(['VendorCategory1', 'VendorCategory2'])
+      gLib._createVendorCategories.mockReturnValue({failedVendorCategories: ['VendorCategory1', 'VendorCategory2']})
 
       expect(() => gLib.CreateVendors()).toThrow('Script failed while creating the following vendor categories: VendorCategory1, VendorCategory2')
       expect(gLib._createVendors).not.toHaveBeenCalled()
     })
-    it('alerts the user of failed rows and highlights them in red', () => {
-      
+    it('throws an error when there are failed rows and highlights them in red', () => {
+      gLib.getSpreadSheetData.mockReturnValue([
+        { Name: 'mockVendor1', City: 'mockCity1', 'Vendor Category': 'VendorCategory1'},
+        { Name: 'mockVendor2', City: 'mockCity2', 'Vendor Category': 'VendorCategory2'},
+        { Name: 'mockVendor3', City: 'mockCity3', 'Vendor Category': 'VendorCategory1'}  
+      ])
+      gLib._createVendors.mockReturnValue({failedRows: [2,3,4], createdVendors: []})
+      expect(() => gLib.CreateVendors()).toThrow('The following vendors failed to be created. Failed rows: 2, 3, 4')
+      expect(gLib.highlightRows).toHaveBeenCalledWith([2,3,4], 'red')
+      expect(gLib.getDBCategoryList).not.toHaveBeenCalled()
+    })
+    it('correctly sorts vendor material categories into their respective parent and sub categories.', () => {
+      gLib.getSpreadSheetData.mockReturnValue([
+        { Name: 'mockVendor1', City: 'mockCity1', 'Material Categories': 'parentcat1, parentcat2, subcat1, subcat2'},
+        { Name: 'mockVendor2', City: 'mockCity2', 'Material Categories': 'parentcat1, subcat3'},
+        { Name: 'mockVendor3', City: 'mockCity3', 'Material Categories': 'parentcat3, parentcat4, subcat4'}  
+      ])
+      gLib._createVendors.mockReturnValue({failedRows: [], createdVendors: [
+        { ObjectID: 'vendor1REF', Name: 'mockVendor1', City: 'mockCity1'},
+        { ObjectID: 'vendor2REF', Name: 'mockVendor2', City: 'mockCity2'},
+        { ObjectID: 'vendor3REF', Name: 'mockVendor3', City: 'mockCity3'},
+      ]})
+      gLib.getDBCategoryList.mockReturnValue([
+        { Name: 'parentcat1', ObjectID: 'parentCat1REF'},
+        { Name: 'parentcat2', ObjectID: 'parentCat2REF'},
+        { Name: 'parentcat3', ObjectID: 'parentCat3REF'},
+        { Name: 'parentcat4', ObjectID: 'parentCat4REF'}
+      ])
+      gLib.getDBSubcategoryList.mockReturnValue([
+        { Name: 'subcat1', ObjectID: 'subcat1REF' },
+        { Name: 'subcat2', ObjectID: 'subcat2REF' },
+        { Name: 'subcat3', ObjectID: 'subcat3REF' },
+        { Name: 'subcat4', ObjectID: 'subcat4REF' }
+      ])
+      gLib.CreateVendors()
+
+      expect(gLib._addVendorMaterialCategories).nthCalledWith(1, [
+          { OrganizationREF: 'vendor1REF', MaterialCategoryREF: 'parentCat1REF'},
+          { OrganizationREF: 'vendor1REF', MaterialCategoryREF: 'parentCat2REF'},
+          { OrganizationREF: 'vendor2REF', MaterialCategoryREF: 'parentCat1REF'},
+          { OrganizationREF: 'vendor3REF', MaterialCategoryREF: 'parentCat3REF'},
+          { OrganizationREF: 'vendor3REF', MaterialCategoryREF: 'parentCat4REF'},
+        ],
+        false, mockToken, mockBaseUrl  
+      )
+      expect(gLib._addVendorMaterialCategories).nthCalledWith(2, [
+          { OrganizationREF: 'vendor1REF', MaterialSubcategoryREF: 'subcat1REF'},
+          { OrganizationREF: 'vendor1REF', MaterialSubcategoryREF: 'subcat2REF'},
+          { OrganizationREF: 'vendor2REF', MaterialSubcategoryREF: 'subcat3REF'},
+          { OrganizationREF: 'vendor3REF', MaterialSubcategoryREF: 'subcat4REF'},
+        ],
+        true, mockToken, mockBaseUrl
+      )
+      expect(mockUi.alert).toHaveBeenCalledWith("All rows were created successfully.")
+    })
+    it('throws an error when _addVendorMaterialCategories returns with failed categories', () => {
+      gLib.getSpreadSheetData.mockReturnValue([
+        { Name: 'mockVendor1', City: 'mockCity1', 'Material Categories': 'parentcat1, parentcat2, subcat1, subcat2'},
+        { Name: 'mockVendor2', City: 'mockCity2', 'Material Categories': 'parentcat1, subcat3'},
+        { Name: 'mockVendor3', City: 'mockCity3', 'Material Categories': 'parentcat3, parentcat4, subcat4'}  
+      ])
+      gLib._createVendors.mockReturnValue({failedRows: [], createdVendors: [
+        { ObjectID: 'vendor1REF', Name: 'mockVendor1', City: 'mockCity1'},
+        { ObjectID: 'vendor2REF', Name: 'mockVendor2', City: 'mockCity2'},
+        { ObjectID: 'vendor3REF', Name: 'mockVendor3', City: 'mockCity3'},
+      ]})
+      gLib.getDBCategoryList.mockReturnValue([
+        { Name: 'parentcat1', ObjectID: 'parentCat1REF'},
+        { Name: 'parentcat2', ObjectID: 'parentCat2REF'},
+        { Name: 'parentcat3', ObjectID: 'parentCat3REF'},
+        { Name: 'parentcat4', ObjectID: 'parentCat4REF'}
+      ])
+      gLib._addVendorMaterialCategories.mockReturnValue([
+        {OrganizationREF: 'vendor1REF', MaterialCategoryREF: 'parentCat1REF'}, 
+        {OrganizationREF: 'vendor1REF', MaterialCategoryREF: 'parentCat2REF'}
+      ])
+      expect(() => gLib.CreateVendors()).toThrow(`The following vendors and material categories failed to be connected.\nVendor: "mockVendor1", MaterialCategory: "parentcat1"\nVendor: "mockVendor1", MaterialCategory: "parentcat2"`)
+      expect(mockUi.alert).not.toHaveBeenCalled()
+    })
+    it('throws an error when _addVendorMaterialCategories returns with failed subcategories', () => {
+      gLib.getSpreadSheetData.mockReturnValue([
+        { Name: 'mockVendor1', City: 'mockCity1', 'Material Categories': 'parentcat1, parentcat2, subcat1, subcat2'},
+        { Name: 'mockVendor2', City: 'mockCity2', 'Material Categories': 'parentcat1, subcat3'},
+        { Name: 'mockVendor3', City: 'mockCity3', 'Material Categories': 'parentcat3, parentcat4, subcat4'}  
+      ])
+      gLib._createVendors.mockReturnValue({failedRows: [], createdVendors: [
+        { ObjectID: 'vendor1REF', Name: 'mockVendor1', City: 'mockCity1'},
+        { ObjectID: 'vendor2REF', Name: 'mockVendor2', City: 'mockCity2'},
+        { ObjectID: 'vendor3REF', Name: 'mockVendor3', City: 'mockCity3'},
+      ]})
+      gLib.getDBCategoryList.mockReturnValue([
+        { Name: 'parentcat1', ObjectID: 'parentCat1REF'},
+        { Name: 'parentcat2', ObjectID: 'parentCat2REF'},
+        { Name: 'parentcat3', ObjectID: 'parentCat3REF'},
+        { Name: 'parentcat4', ObjectID: 'parentCat4REF'}
+      ])
+      gLib.getDBSubcategoryList.mockReturnValue([
+        { Name: 'subcat1', ObjectID: 'subcat1REF' },
+        { Name: 'subcat2', ObjectID: 'subcat2REF' },
+        { Name: 'subcat3', ObjectID: 'subcat3REF' },
+        { Name: 'subcat4', ObjectID: 'subcat4REF' }
+      ])
+  
+      gLib._addVendorMaterialCategories.mockReturnValueOnce([])
+      gLib._addVendorMaterialCategories.mockReturnValueOnce([
+        {OrganizationREF: 'vendor1REF', MaterialSubcategoryREF: 'subcat1REF'}, 
+        {OrganizationREF: 'vendor1REF', MaterialSubcategoryREF: 'subcat2REF'}
+      ])
+      expect(() => gLib.CreateVendors()).toThrow(`The following vendors and material subcategories failed to be connected.\nVendor: "mockVendor1", MaterialSubcategory: "subcat1"\nVendor: "mockVendor1", MaterialSubcategory: "subcat2"`)
+      expect(mockUi.alert).not.toHaveBeenCalled()
     })
   })
 })

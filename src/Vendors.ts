@@ -56,7 +56,7 @@ function CreateVendors() {
     const {failedRows, createdVendors} = _createVendors(vendorData, token, baseUrl)
     if(failedRows.length > 0) {
         highlightRows(failedRows, 'red')
-        SpreadsheetApp.getUi().alert(`The following failed to be created. Failed rows: ${failedRows.join(", ")}`)
+        throw new Error(`The following vendors failed to be created. Failed rows: ${failedRows.join(", ")}`)
     }
 
     const allMaterialCategories = getDBCategoryList('MaterialCategory', token, baseUrl)
@@ -95,16 +95,14 @@ function CreateVendors() {
     })
     const failedMaterialCategories = _addVendorMaterialCategories(parentMaterialCategories, false, token, baseUrl)
     if(failedMaterialCategories.length > 0) {
-        throw new Error(`The following vendors and material categories failed to be connected.
-            ${failedMaterialCategories.map(each => {
+        throw new Error(`The following vendors and material categories failed to be connected.\n${failedMaterialCategories.map(each => {
                 return `Vendor: "${createdVendors.find(vend => vend.ObjectID === each.OrganizationREF)?.Name}", MaterialCategory: "${allMaterialCategories.find(matCat => each.MaterialCategoryREF === matCat.ObjectID)?.Name}"`
             }).join('\n')}`)
     }
         
     const failedMaterialSubcategories = _addVendorMaterialCategories(subMaterialCategories, true, token, baseUrl)
     if(failedMaterialSubcategories.length > 0) {
-        throw new Error(`The following vendors and material subcategories failed to be connected.
-            ${failedMaterialCategories.map(each => {
+        throw new Error(`The following vendors and material subcategories failed to be connected.\n${failedMaterialSubcategories.map(each => {
                 return `Vendor: "${createdVendors.find(vend => vend.ObjectID === each.OrganizationREF)?.Name}", MaterialSubcategory: "${allMaterialSubcategories.find(matCat => each.MaterialSubcategoryREF === matCat.ObjectID)?.Name}"`
             }).join('\n')}`)
     }
