@@ -1,4 +1,4 @@
-interface ICustomer extends Record<string, TSpreadsheetValues | undefined> {
+interface ICustomerRow extends Record<string, TSpreadsheetValues | undefined> {
     Name: string, 
     Address1?: string,
     Address2?: string,
@@ -17,7 +17,7 @@ interface ICustomer extends Record<string, TSpreadsheetValues | undefined> {
 function CreateCustomers() {
 
   const {token, baseUrl} = authenticate()
-  const customerData = getSpreadSheetData<ICustomer>('Customers')
+  const customerData = getSpreadSheetData<ICustomerRow>('Customers')
 
     // Check if no data and quit
   if (!customerData || customerData.length === 0) {
@@ -43,7 +43,7 @@ function CreateCustomers() {
     SpreadsheetApp.getUi().alert("All customers successfully created.")
   }
 }
-function _createCustomers(customerData: ICustomer[], token: string, baseUrl: string) {
+function _createCustomers(customerData: ICustomerRow[], token: string, baseUrl: string) {
   const headers = createHeaders(token)
   const url = baseUrl + '/Resource/Organization/Customer'
   const failedRows: number[] = [];

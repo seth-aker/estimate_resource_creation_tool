@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+</head>
+
+<body>
+    <h2>Please select the default System of Measure</h2>
+    <form id="system-of-measure">
+        <div style="display: flex; flex-direction: column;">
+            <div>
+                <input id="imperial" type="radio" value="Imperial" name="umSystem" />
+                <label for="imperial">Imperial</label>
+            </div>
+            <div>
+                <input id="metric" type="radio" value="Metric" name="umSystem" />
+                <label for="metric">Metric</label>
+            </div>
+        </div>
+        <button id="submit" type="submit" form="system-of-measure">Submit</button>
+    </form>
+</body>
+<script>
+    const form = document.getElementById('system-of-measure')
+    const submitButton = document.getElementById('submit')
+    window.addEventListener('load', () => {
+        form.addEventListener('submit', (event) => {
+            event.preventDefault()
+            handleSubmit(form)
+        })
+    });
+
+    function handleSubmit(formElement) {
+        submitButton.disabled = true
+        const umSystem = formElement.querySelector('input[name="umSystem"]:checked').value
+        google.script.run.CreateMiscellaneous(umSystem)
+        setTimeout(google.script.host.close, 1000)
+    }
+</script>
+
+</html>

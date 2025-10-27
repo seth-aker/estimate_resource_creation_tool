@@ -1,7 +1,7 @@
 // Work types require a EstimateREF to be sent with the post, use this as a dummy ref
 const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000";
 
-type TOrganizationDTO = ISubcontractorDTO | ICustomer
+type TOrganizationDTO = ISubcontractorDTO | ICustomerRow | IVendorDTO
 interface ICategoryItem {
   EstimateREF: string,
   Name: string,
