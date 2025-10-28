@@ -1,4 +1,6 @@
 # Estimate Resource Creator
+[![clasp](https://img.shields.io/badge/built%20with-clasp-4285f4.svg)](https://github.com/google/clasp)
+
 Used in conjunction with Google Sheets and Google Apps Scripts to send resources to the B2W Estimate API. 
 
 It is highly recommended to make a copy of the production Google Sheets document and then use that to run your data uploads. Making a copy of the Google Sheet will also make a copy of the Apps Scripts.
