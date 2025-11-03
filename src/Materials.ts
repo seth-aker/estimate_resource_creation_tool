@@ -1,4 +1,4 @@
-type TSystemOfMeasure = "Imperial" | "Metric"
+type TSystemOfMeasure = "Imperial" | "Metric" | "SystemIndependant"
 interface IMaterialRow extends Record<string, TSpreadsheetValues | undefined> {
     Name: string,
     Category?: string,
