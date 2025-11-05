@@ -39,7 +39,13 @@ export const mockUserProperties = {
 }
 export const mockPropertiesObject = {
   getProperties: vi.fn(() => mockUserProperties),
-  getProperty: vi.fn((prop: keyof typeof mockUserProperties) => mockUserProperties[prop]),
+  getProperty: vi.fn((prop: string) => {    
+    if(Object.hasOwn(mockUserProperties, prop)) {
+      return mockUserProperties[prop as keyof typeof mockUserProperties]
+    } else {
+      return null
+    }
+  }),
   setProperties: vi.fn()
 }
 export const mockPropertiesService = {

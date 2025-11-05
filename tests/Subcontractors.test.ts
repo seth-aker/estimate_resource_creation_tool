@@ -1,5 +1,5 @@
 import { vi, describe, it, beforeEach, expect, beforeAll} from 'vitest'
-import gas from 'gas-local'
+import { gasRequire } from 'tgas-local'
 import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUserProperties } from './mocks'
 
 const mockGetDBCategoryList = vi.fn()
@@ -12,7 +12,7 @@ const mocks = {
     Logger: mockLogger,
     PropertiesService: mockPropertiesService
 }
-const gLib = gas.require('./dist', mocks)
+const gLib = gasRequire('./dist', mocks)
 gLib.getDBCategoryList = mockGetDBCategoryList
 gLib.getDBSubcategoryList = mockGetDBSubcategoryList
 gLib.getOrganization = mockGetOrganization

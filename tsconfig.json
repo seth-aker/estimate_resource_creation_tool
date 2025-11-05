@@ -1,15 +1,14 @@
 {
   "compilerOptions": {
    
-    "target": "ES2020", 
-    "lib": ["ES2020"],
+    "target": "ES2022", 
+    "lib": ["ES2022"],
 
     "esModuleInterop": true,
     "skipLibCheck": true,
     
     "moduleResolution": "bundler", 
     "allowSyntheticDefaultImports": true, 
-    "outDir": "./dist", 
     
     "strict": true, 
     "noImplicitAny": true, 
@@ -21,15 +20,13 @@
     
     
     "sourceMap": true,
-    "typeRoots": ["./node_modules/@types", "./types"]
+    
   },
   "include": [
     "src/**/*.ts",
-    "tests/**/*.ts",
-    "types"
+    "tests/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
     "dist"
   ]
 }

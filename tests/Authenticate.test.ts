@@ -1,5 +1,5 @@
 import { vi, describe, it, beforeEach, expect} from 'vitest'
-import gas from 'gas-local'
+import { gasRequire } from 'tgas-local'
 import { mockLogger, mockSpreadsheetApp, mockUrlFetchApp } from './mocks'
 
 const mocks = {
@@ -7,7 +7,7 @@ const mocks = {
     UrlFetchApp: mockUrlFetchApp,
     Logger: mockLogger
 }
-const gLib = gas.require('./dist', mocks)
+const gLib = gasRequire('./dist', mocks)
 
 describe("Authenticate", () => {
     beforeEach(() => {

@@ -1,4 +1,4 @@
-import gas from 'gas-local';
+import { gasRequire } from 'tgas-local'
 import { vi, beforeEach, expect, describe, it, beforeAll } from 'vitest'
 import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockUi, mockPropertiesService, mockUserProperties } from './mocks';
 
@@ -15,7 +15,7 @@ const mocks = {
   // __proto__: gas.globalMockDefaults
 }
 
-const glib = gas.require('./dist', mocks)
+const glib = gasRequire('./dist', mocks)
 
 describe('WorkTypes', () => {
   const mockWorkTypeID = "1234"

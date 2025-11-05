@@ -1,4 +1,4 @@
-import gas from 'gas-local';
+import { gasRequire } from 'tgas-local'
 import { vi, beforeEach, expect, describe, it } from 'vitest'
 import { mockSpreadsheetApp, mockUrlFetchApp, mockUi, mockLogger, mockAuthenticate, mockRange, mockSheet, mockPropertiesService } from './mocks';
 
@@ -10,7 +10,7 @@ const mocks = {
   // __proto__: gas.globalMockDefaults
 }
 
-const glib = gas.require('./dist', mocks)
+const glib = gasRequire('./dist', mocks)
 describe('CreateJCIDS', () => {
   beforeEach(() => {
     vi.resetAllMocks()

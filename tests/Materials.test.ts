@@ -1,5 +1,5 @@
 import { vi, describe, it, beforeEach, expect, beforeAll} from 'vitest'
-import gas from 'gas-local'
+import { gasRequire } from 'tgas-local'
 import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUserProperties } from './mocks'
 
 const mocks = {
@@ -8,7 +8,7 @@ const mocks = {
     Logger: mockLogger,
     PropertiesService: mockPropertiesService
 }
-const gLib = gas.require('./dist', mocks)
+const gLib = gasRequire('./dist', mocks)
 const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000"
 const mockBaseUrl = 'https://mock.com'
 const mockToken = 'mockToken'
