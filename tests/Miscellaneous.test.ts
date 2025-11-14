@@ -8,7 +8,7 @@ const mocks = {
     Logger: mockLogger,
     PropertiesService: mockPropertiesService
 }
-const gLib = gasRequire('./dist', mocks)
+const gLib = gasRequire('./src', mocks)
 
 describe('Miscellaneous', () => {
   const mockToken = 'mockToken'
@@ -77,11 +77,12 @@ describe('Miscellaneous', () => {
         { getResponseCode: () => 500, getContentText: () => "Error" },
         { getResponseCode: () => 201 }
       ])
-      const dtos = [
+      const dtos= [
         {rowData: 'data'},
         {rowData: 'data'},
         {rowData: 'data'},
       ]
+      //@ts-ignore
       const failedRows = gLib._createMiscellaneous(dtos, mockToken, mockBaseUrl)
       expect(failedRows).toEqual([2,3])
       expect(mockLogger.log).toHaveBeenCalledTimes(3)
@@ -97,6 +98,7 @@ describe('Miscellaneous', () => {
         {rowData: 'data'},
         {rowData: 'data'},
       ]
+      //@ts-ignore
       const failedRows = gLib._createMiscellaneous(dtos, mockToken, mockBaseUrl)
       expect(failedRows).toEqual([])
       expect(mockLogger.log).toHaveBeenCalledTimes(3)
@@ -111,25 +113,31 @@ describe('Miscellaneous', () => {
       gLib.highlightRows = vi.fn()
     })
     it('returns early when there is no data to send', () => {
-      gLib.CreateMiscellaneous()
+      gLib.CreateMiscellaneous("Imperial")
       expect(mockLogger.log).toHaveBeenCalledWith("CreateMiscellaneous() failed to run because there was no data to send.")
       expect(mockUi.alert).toHaveBeenCalledWith('No data to send!')
     })
     it('highlights failed rows and alerts user when _createMiscellaneous returns with failed rows', () => {
+      //@ts-ignore
       gLib._createMiscellaneous.mockReturnValue([2,3])
+      //@ts-ignore
       gLib.getSpreadSheetData.mockReturnValue(mockSpreadsheetData)
+      //@ts-ignore
       gLib.createMiscDTOFromRow.mockReturnValue([miscDTO1, miscDTO2, miscDTO3])
-      
+      //@ts-ignore
       gLib.CreateMiscellaneous()
 
       expect(gLib.highlightRows).toHaveBeenCalledWith([2,3], 'red')
       expect(mockUi.alert).toHaveBeenCalledWith('Some rows failed to be created: 2, 3')
     })
     it('successfully alerts user when all rows are correctly created', () => {
+      //@ts-ignore
       gLib._createMiscellaneous.mockReturnValue([])
+      //@ts-ignore
       gLib.getSpreadSheetData.mockReturnValue(mockSpreadsheetData)
+      //@ts-ignore
       gLib.createMiscDTOFromRow.mockReturnValue([miscDTO1, miscDTO2, miscDTO3])
-      
+      //@ts-ignore
       gLib.CreateMiscellaneous()
 
       expect(mockUi.alert).toHaveBeenCalledWith('All rows successfully created!')

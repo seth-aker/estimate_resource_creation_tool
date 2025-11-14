@@ -234,12 +234,14 @@ describe("MaterialCategory", () => {
     })
     describe('CreateMaterialCategories', () => {
         gLib.authenticate = vi.fn(() => ({token: mockToken, baseUrl: mockBaseUrl}))
+        // @ts-ignore
         gLib.getSpreadSheetData = vi.fn(() => [
             {"Material Category": 'category1', "Material Subcategory": 'subcategory1'},
             {"Material Category": 'category1', "Material Subcategory": 'subcategory2'},
             {"Material Category": 'category2', "Material Subcategory": 'subcategory3'}
         ])
         it('returns early where there is not spreadsheet data', () => {
+            //@ts-ignore
             gLib.getSpreadSheetData.mockReturnValue([])
             gLib.CreateMaterialCategories()
             expect(mockLogger.log).toHaveBeenCalledWith('No data to send!')
@@ -254,7 +256,9 @@ describe("MaterialCategory", () => {
                 {EstimateREF: ESTIMATE_REF, Name: 'category1', ObjectID: 'cat1ObjectID'},
                 {EstimateREF: ESTIMATE_REF, Name: 'category2', ObjectID: 'cat2ObjectID'} 
             ]
+            //@ts-ignore
             gLib._createMaterialCategories.mockReturnValue({failedCategories: [], createdCategories: mockCreatedCategories})
+            //@ts-ignore
             gLib._createMaterialSubcategories = vi.fn(() => ({failedSubcategories: ['subcategory1', 'subcategory2']}))
             expect(() => gLib.CreateMaterialCategories()).toThrowError('The following material subcategories failed to be created: "subcategory1", "subcategory2"')
         })
@@ -263,7 +267,9 @@ describe("MaterialCategory", () => {
                 {EstimateREF: ESTIMATE_REF, Name: 'category1', ObjectID: 'cat1ObjectID'},
                 {EstimateREF: ESTIMATE_REF, Name: 'category2', ObjectID: 'cat2ObjectID'} 
             ]
+            //@ts-ignore
             gLib._createMaterialCategories.mockReturnValue({failedCategories: [], createdCategories: mockCreatedCategories})
+            //@ts-ignore
             gLib._createMaterialSubcategories = vi.fn(() => ({failedSubcategories: []}))
             gLib.CreateMaterialCategories()
             expect(mockUi.alert).toHaveBeenCalledWith("All Material Categories created successfully!")

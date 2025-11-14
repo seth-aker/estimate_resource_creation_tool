@@ -11,8 +11,9 @@
 		"globals": "^16.5.0",
 		"jiti": "^2.6.1",
 		"rimraf": "^6.1.0",
-		"tgas-local": "^1.0.5",
+		"tgas-local": "^1.0.6",
 		"typescript": "^5.9.3",
+		"typescript-plugin-tgas-local": "^0.0.3",
 		"vitest": "^3.2.4"
 	}
 }

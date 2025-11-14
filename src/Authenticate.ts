@@ -106,9 +106,9 @@ function _getToken(baseUrl: string, credentials: Credentials) {
 /**
  * Used to authenticate with the api and returns the necessary information to call endpoints.
  * Namely, the token from /login and baseUrl from the speadsheet
- * @returns token: string, baseUrl: string
+ * @returns \{ token: string, baseUrl: string }
  */
-function authenticate() {
+function authenticate(): {token: string, baseUrl: string} {
   // use to get bearer token
   const spreadsheetVars = _getUserVariables()
   if(!spreadsheetVars) throw new Error("Missing API_Information!")

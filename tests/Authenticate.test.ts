@@ -13,7 +13,6 @@ describe("Authenticate", () => {
     beforeEach(() => {
         vi.resetAllMocks()
     })
-
     describe('_getToken()', () => {
         it('throws when response code is not 200', () => {
             mockUrlFetchApp.fetch.mockReturnValue({
