@@ -8,7 +8,7 @@ const mocks = {
     Logger: mockLogger,
     PropertiesService: mockPropertiesService
 }
-const gLib = gasRequire('./dist', mocks)
+const gLib = gasRequire('./src', mocks)
 const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000"
 const mockBaseUrl = 'https://mock.com'
 const mockToken = 'mockToken'

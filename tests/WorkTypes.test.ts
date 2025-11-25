@@ -6,7 +6,7 @@ const mockGetDBSubcategoryList = vi.fn()
 const mockGetDBCategoryList = vi.fn()
 const mockGetSpreadsheetData = vi.fn()
 const mockCreateWorkTypes = vi.fn(() => ({failedWorkTypes: [] as string[], createdWorkTypes: [] as ICategoryItem[]}))
-const mockCreateWorkSubTypes = vi.fn(() => ({failedWorkSubtypes: [] as string[], createdWorkSubtypes: [] as ICategoryItem[]}))
+const mockCreateWorkSubTypes = vi.fn(() => ({failedWorkSubtypes: [] as string[], createdWorkSubtypes: [] as ISubcategoryItem[]}))
 const mocks = {
   SpreadsheetApp: mockSpreadsheetApp,
   UrlFetchApp: mockUrlFetchApp,
@@ -15,7 +15,7 @@ const mocks = {
   // __proto__: gas.globalMockDefaults
 }
 
-const glib = gasRequire('./dist', mocks)
+const glib = gasRequire('./src', mocks)
 
 describe('WorkTypes', () => {
   const mockWorkTypeID = "1234"

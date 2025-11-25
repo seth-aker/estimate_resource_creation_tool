@@ -10,7 +10,7 @@ const mocks = {
     Logger: mockLogger,
     PropertiesService: mockPropertiesService
 }
-const gLib = gasRequire('./dist', mocks)
+const gLib = gasRequire('./src', mocks)
 gLib.getDBSubcategoryList = mockGetDBSubcategoryList
 gLib.getDBCategoryList = mockGetDBCategoryList
 gLib.getSpreadSheetData = mockGetSpreadSheetData

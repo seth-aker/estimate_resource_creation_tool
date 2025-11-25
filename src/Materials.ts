@@ -59,7 +59,7 @@ function _createMaterials(materials: IMaterialDTO[], token: string, baseUrl: str
     const failedMaterials: number[] = [] 
     const createdMaterials: IMaterialDTO[] = []
     try {
-        const responses = UrlFetchApp.fetchAll(batchOptions)
+        const responses = batchFetch(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {

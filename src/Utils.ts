@@ -1,5 +1,6 @@
 // Work types require a EstimateREF to be sent with the post, use this as a dummy ref
 const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000";
+const DEFAULT_BATCH_SIZE = 100
 
 type TOrganizationDTO = ISubcontractorDTO | ICustomerRow | IVendorDTO
 interface ICategoryItem {
@@ -78,7 +79,19 @@ function createHeaders(token: string, additionalHeaders?: Record<string, string>
         ...additionalHeaders
     }
 }
+function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[]) {
+  const sliceNumber = Math.ceil(batchOptions.length / DEFAULT_BATCH_SIZE)
+  const responses: GoogleAppsScript.URL_Fetch.HTTPResponse[] = []
 
+  for(let i = 0; i < sliceNumber; i++) {
+    responses.push(...UrlFetchApp.fetchAll(batchOptions.slice(i * DEFAULT_BATCH_SIZE, (i + 1) * DEFAULT_BATCH_SIZE)))
+    // if only one call is being made or on the last call, don't sleep
+    if(sliceNumber > 1 && i < sliceNumber - 1) {
+      Utilities.sleep(500)
+    }
+  }
+  return responses
+}
 function getOrganization(orgType: string, token: string, baseUrl: string, query: string = `?$filter=EstimateREF eq ${ESTIMATE_REF}`) {
   const url = baseUrl + `/Resource/Organization/${orgType}${query}`
   const headers = createHeaders(token)

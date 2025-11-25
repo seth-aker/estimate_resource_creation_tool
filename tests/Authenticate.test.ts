@@ -7,7 +7,7 @@ const mocks = {
     UrlFetchApp: mockUrlFetchApp,
     Logger: mockLogger
 }
-const gLib = gasRequire('./dist', mocks)
+const gLib = gasRequire('./src', mocks)
 
 describe("Authenticate", () => {
     beforeEach(() => {
@@ -34,7 +34,7 @@ describe("Authenticate", () => {
                 getResponseCode: () => 200,
                 getContentText: () => JSON.stringify({AccessToken: "accessToken", RefreshToken: "refreshToken"})
             })
-             const baseUrl = 'baseUrl'
+            const baseUrl = 'baseUrl'
             const credentials = {
                     clientID: "id",
                     clientSecret: 'secret',

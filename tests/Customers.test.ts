@@ -7,7 +7,7 @@ const mocks = {
     Logger: mockLogger,
     PropertiesService: mockPropertiesService
 }
-const gLib = gasRequire('./dist', mocks)
+const gLib = gasRequire('./src', mocks)
 
 describe('Customers', () => {
   beforeEach(() => {
@@ -113,32 +113,37 @@ describe('Customers', () => {
     })
   })
   describe('CreateCustomers', () => {
+    const mockAuthenticate = vi.fn(() => ({token: mockToken, baseUrl: mockBaseUrl}))
+    const mockGetSpreadSheetData = vi.fn()
+    const mockCreateCustomerCategories = vi.fn()
+    const mockCreateCustomers = vi.fn()
+    const mockHighlightRows = vi.fn()
     beforeAll(() => {
-      gLib.authenticate = vi.fn(() => ({token: mockToken, baseUrl: mockBaseUrl}))
-      gLib.getSpreadSheetData = vi.fn()
-      gLib._createCustomerCategories = vi.fn()
-      gLib._createCustomers = vi.fn()
-      gLib.highlightRows = vi.fn()
+      gLib.authenticate = mockAuthenticate
+      gLib.getSpreadSheetData = mockGetSpreadSheetData
+      gLib._createCustomerCategories = mockCreateCustomerCategories
+      gLib._createCustomers = mockCreateCustomers
+      gLib.highlightRows = mockHighlightRows
     })
     it('exits early when there is no customer data to send', () => {
-      gLib.getSpreadSheetData.mockReturnValue([])
+      mockGetSpreadSheetData.mockReturnValue([])
       gLib.CreateCustomers()
       expect(mockLogger.log).toHaveBeenCalledWith("CreateCustomers() failed to run because there was no data to send.")
       expect(mockUi.alert).toHaveBeenCalledWith('No data to send!')
       expect(gLib._createCustomerCategories).not.toHaveBeenCalled()
     })
     it('throws error when _createCustomerCategories returns failed categories', () => {
-      gLib.getSpreadSheetData.mockReturnValue([mockCustomerRow1, mockCustomerRow2])
-      gLib._createCustomerCategories.mockReturnValue(['Cat1'])
+      mockGetSpreadSheetData.mockReturnValue([mockCustomerRow1, mockCustomerRow2])
+      mockCreateCustomerCategories.mockReturnValue(['Cat1'])
       
       expect(() => gLib.CreateCustomers()).toThrow('Script failed while creating the following customer categories: Cat1')
       expect(gLib._createCustomerCategories).toHaveBeenCalledWith(['Cat1'], mockToken, mockBaseUrl)
       expect(gLib._createCustomers).not.toHaveBeenCalled()
     })
     it('alerts users of an error and highlights failed rows when _createCustomers returns failed rows', () => {
-      gLib.getSpreadSheetData.mockReturnValue([mockCustomerRow1, mockCustomerRow2])
-      gLib._createCustomerCategories.mockReturnValue([])
-      gLib._createCustomers.mockReturnValue([2,3])
+      mockGetSpreadSheetData.mockReturnValue([mockCustomerRow1, mockCustomerRow2])
+      mockCreateCustomerCategories.mockReturnValue([])
+      mockCreateCustomers.mockReturnValue([2,3])
 
       gLib.CreateCustomers()
       
@@ -147,9 +152,9 @@ describe('Customers', () => {
       expect(mockUi.alert).toHaveBeenCalledWith('Some rows failed to be created. Failed Rows: 2, 3')
     })
     it('correctly completes with no errors when all functions return empty arrays', () => {
-      gLib.getSpreadSheetData.mockReturnValue([mockCustomerRow1, mockCustomerRow2])
-      gLib._createCustomerCategories.mockReturnValue([])
-      gLib._createCustomers.mockReturnValue([])
+      mockGetSpreadSheetData.mockReturnValue([mockCustomerRow1, mockCustomerRow2])
+      mockCreateCustomerCategories.mockReturnValue([])
+      mockCreateCustomers.mockReturnValue([])
 
       gLib.CreateCustomers()
       expect(gLib._createCustomerCategories).toHaveBeenCalledWith(['Cat1'], mockToken, mockBaseUrl)

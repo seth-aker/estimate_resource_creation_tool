@@ -9,7 +9,6 @@
 		"@google/clasp": "3.0.6-alpha",
 		"@types/google-apps-script": "^2.0.7",
 		"globals": "^16.5.0",
-		"jiti": "^2.6.1",
 		"rimraf": "^6.1.0",
 		"tgas-local": "^1.0.6",
 		"typescript": "^5.9.3",

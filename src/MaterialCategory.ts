@@ -69,7 +69,7 @@ function _createMaterialCategories(materialCategories: string[], token: string, 
         return options
     }) 
     try {
-        const responses = UrlFetchApp.fetchAll(batchOptions)
+        const responses = batchFetch(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -122,7 +122,7 @@ function _createMaterialSubcategories(subcategoryParentMap: IParentSubcategoryMa
     }))
 
     try {
-        const responses = UrlFetchApp.fetchAll(batchOptions)
+        const responses = batchFetch(batchOptions)
         const materialSubcategoriesToFetch: ISubcategoryItem[] = []
         const createdSubcategories: ISubcategoryItem[] = [];
         responses.forEach((response, index) => {

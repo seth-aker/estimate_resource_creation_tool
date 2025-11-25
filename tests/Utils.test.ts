@@ -1,20 +1,24 @@
 import { gasRequire } from 'tgas-local'
 import { vi, beforeEach, expect, describe, it } from 'vitest'
 import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockSpreadsheet, mockRange} from './mocks';
+const mockUtilities = {
+  sleep: vi.fn()
+}
 const mocks = {
   SpreadsheetApp: mockSpreadsheetApp,
   UrlFetchApp: mockUrlFetchApp,
   Logger: mockLogger,
+  Utilities: mockUtilities
   // __proto__: gas.globalMockDefaults
 }
 
-const glib = gasRequire('./dist', mocks)
+const glib = gasRequire('./src', mocks)
 
 describe("Utils Tests", () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
   describe("GetSpreadSheetData", () => {
-    beforeEach(() => {
-      vi.resetAllMocks()
-    })
     it('throws and error if spreadsheetName could not be found', () => {
       mockSpreadsheet.getSheetByName.mockImplementation(() => null)
       expect(() => glib.getSpreadSheetData("Test")).toThrow(/^Could not find spreadsheet: "Test"$/)
@@ -229,4 +233,28 @@ describe("Utils Tests", () => {
       expect(glib.deepIncludes([], { a: 1 })).toBe(false);
     });
   });
+  describe('batchFetch()', () => {
+    it('should call UrlFetchApp multiple times for large number of batchOptions', () => {
+      let largeArray: string[] = new Array(500)
+      largeArray = largeArray.fill('option')
+      mockUrlFetchApp.fetchAll.mockImplementation((options: string[]) => new Array(options.length).fill('returnValues'))
+      const results = glib.batchFetch(largeArray)
+      expect(results.length).toBe(500)
+      expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledTimes(5)
+      expect(mockUtilities.sleep).toHaveBeenCalledTimes(4)
+    })
+    it('should not call sleep if only making one api call', () => {
+      const array = ['option', 'option', 'option']
+      mockUrlFetchApp.fetchAll.mockImplementation((options: string[]) => new Array(options.length).fill('returnValues'))
+      const results = glib.batchFetch(array)
+      expect(results.length).toBe(3)
+      expect(glib.Utilities.sleep).not.toHaveBeenCalled()
+    })
+    it('should not make any calls if batch length is 0', () => {
+      const array: string[] = []
+      const results = glib.batchFetch(array)
+      expect(results.length).toBe(0)
+      expect(mockUrlFetchApp.fetchAll).not.toHaveBeenCalled()
+    })
+  })
 })

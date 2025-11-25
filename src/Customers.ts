@@ -5,7 +5,7 @@ interface ICustomerRow extends Record<string, TSpreadsheetValues | undefined> {
     City: string,
     State?: string,
     Country?: string,
-    Zip?: number,
+    Zip?: string,
     Phone?: string,
     Fax?: string,
     WebAddress?: string,
@@ -63,7 +63,7 @@ function _createCustomers(customerData: ICustomerRow[], token: string, baseUrl: 
     }
   })
   try {
-    const responses = UrlFetchApp.fetchAll(batchOptions)
+    const responses = batchFetch(batchOptions)
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
       if(responseCode >= 400 && responseCode !== 409) {
@@ -104,7 +104,7 @@ function _createCustomerCategories(categories: string[], token: string, baseUrl:
     return options
   }) 
   try {
-    const responses = UrlFetchApp.fetchAll(batchOptions)
+    const responses = batchFetch(batchOptions)
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
       if(responseCode >= 400 && responseCode !== 409) {

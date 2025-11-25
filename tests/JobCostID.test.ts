@@ -10,7 +10,7 @@ const mocks = {
   // __proto__: gas.globalMockDefaults
 }
 
-const glib = gasRequire('./dist', mocks)
+const glib = gasRequire('./src', mocks)
 describe('CreateJCIDS', () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -31,7 +31,7 @@ describe('CreateJCIDS', () => {
     expect(mocks.Logger.log).toHaveBeenCalledExactlyOnceWith("No data to send!")
   })
   it('alerts the user all records were created when UrlFetchApp returns with no errors', () => {
-    glib.getSpreadSheetData = vi.fn(() => [
+    (glib.getSpreadSheetData as any) = vi.fn(() => [
       {Description: 'Dummy data1', Code: 'moreDummyData'},
       {Description: 'Dummy data2', Code: 'moreDummyData2'}
     ])
@@ -47,7 +47,7 @@ describe('CreateJCIDS', () => {
     expect(mockUi.alert).toHaveBeenCalledWith('All records were created successfully!')
   })
   it('logs rows with error codes, modifies the row background color and alerts the user some rows failed', () => {
-    glib.getSpreadSheetData = vi.fn(() => [
+    (glib.getSpreadSheetData as any) = vi.fn(() => [
       {Description: 'Dummy data1', Code: 'moreDummyData'},
       {Description: 'Dummy data2', Code: 'moreDummyData2'}
     ])

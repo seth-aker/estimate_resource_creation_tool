@@ -4,7 +4,7 @@ interface IVendorRow {
     Address2?: string,
     City: string,
     State?: string,
-    Zip?: number,
+    Zip?: string,
     Country?: string,
     Phone?: string,
     WebAddress?: string,
@@ -114,7 +114,7 @@ function _createVendorCategories(vendorCategories: string[], token: string, base
     if(vendorCategories.length === 0) {
         return {
             failedVendorCategories: failedCategories, 
-            createdVendorCategores: createdCategories
+            createdVendorCategories: createdCategories
         }
     }
     const url = baseUrl + `/Resource/Category/VendorCategory`
@@ -135,7 +135,7 @@ function _createVendorCategories(vendorCategories: string[], token: string, base
         return options
     }) 
     try {
-        const responses = UrlFetchApp.fetchAll(batchOptions)
+        const responses = batchFetch(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -158,7 +158,7 @@ function _createVendorCategories(vendorCategories: string[], token: string, base
         Logger.log(`An unexpected error occured creating vendor categories. Error: ${err}`)
         throw new Error('An unexpected error occured creating vendor categories. Check the logs for more details.')
     }
-    return {failedVendorCategories: failedCategories, createdVendorCategores: createdCategories}
+    return {failedVendorCategories: failedCategories, createdVendorCategories: createdCategories}
 }
 
 function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
@@ -184,7 +184,7 @@ function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
         return options
     })
     try {
-        const responses = UrlFetchApp.fetchAll(batchOptions)
+        const responses = batchFetch(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -225,7 +225,7 @@ function _addVendorMaterialCategories(payloads: IVendorMaterialPayload[], isSubC
         muteHttpExceptions: true
     }))
     try {
-        const responses = UrlFetchApp.fetchAll(batchOptions)
+        const responses = batchFetch(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {

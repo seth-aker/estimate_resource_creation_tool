@@ -8,7 +8,7 @@ const mocks = {
     Logger: mockLogger,
     PropertiesService: mockPropertiesService
 }
-const gLib = gasRequire('./dist', mocks)
+const gLib = gasRequire('./src', mocks)
 
 describe('Contacts', () => {
   const mockToken = 'mockToken'
@@ -34,17 +34,20 @@ describe('Contacts', () => {
   const mockOrg1 = {
     Name: 'mockOrg1',
     City: 'mockCity1',
-    ObjectID: 'orgREF1'
+    ObjectID: 'orgREF1',
+    Type: 'Customer' as const
   }
   const mockOrg2 = {
     Name: 'mockOrg2',
     City: 'mockCity2',
-    ObjectID: 'orgREF2'
+    ObjectID: 'orgREF2',
+    Type: 'Subcontractor' as const
   }
   const mockOrg3 = {
     Name: 'mockOrg3',
     City: 'mockCity3',
-    ObjectID: 'orgREF3'
+    ObjectID: 'orgREF3',
+    Type: 'Vendor' as const
   }
   const mockContactDTO1 = {
     Name: 'mockContact1',
@@ -104,31 +107,36 @@ describe('Contacts', () => {
     })
   })
   describe('CreateContacts', () => {
+    const mockAuthenticate = vi.fn(() => ({ token: mockToken, baseUrl: mockBaseUrl}))
+    const mockGetSpreadSheetData = vi.fn()
+    const mockGetOrganization = vi.fn((orgType: string, ..._: any) => {
+      switch (orgType) {
+        case 'Customer':
+          return [mockOrg1]
+        case 'Subcontractor':
+          return [mockOrg2]
+        default:
+          return [mockOrg3]
+      }
+    })
+    const mockHighlightRows = vi.fn()
+    const mockCreateContacts = vi.fn(() => [] as any[])
     beforeAll(() => {
-      gLib.authenticate = vi.fn(() => ({ token: mockToken, baseUrl: mockBaseUrl}))
-      gLib.getSpreadSheetData = vi.fn()
-      gLib.getOrganization = vi.fn((orgType: string, ..._: any) => {
-        switch (orgType) {
-          case 'Customer':
-            return [mockOrg1]
-          case 'Subcontractor':
-            return [mockOrg2]
-          default:
-            return [mockOrg3]
-        }
-      })
-      gLib.highlightRows = vi.fn()
-      gLib._createContacts = vi.fn(() => [])
+      gLib.authenticate = mockAuthenticate
+      gLib.getSpreadSheetData = mockGetSpreadSheetData
+      gLib.getOrganization = mockGetOrganization
+      gLib.highlightRows = mockHighlightRows
+      gLib._createContacts = mockCreateContacts
     })
     it('exits early when there are no rows returned from getSpreadSheetData', () => {
-      gLib.getSpreadSheetData.mockReturnValue([])
+      mockGetSpreadSheetData.mockReturnValue([])
       gLib.CreateContacts()
       expect(mockLogger.log).toHaveBeenCalledWith("CreateContacts() failed to run because there was no data to send.")
       expect(mockUi.alert).toHaveBeenCalledWith('No data to send!')
       expect(gLib.getOrganization).not.toHaveBeenCalled()
     })
     it('correctly calls getOrganziation with the correct queries.', () => {
-      gLib.getSpreadSheetData.mockReturnValue([mockRow1])
+      mockGetSpreadSheetData.mockReturnValue([mockRow1])
       const expectedGetOrgQuery = "?$filter=EstimateREF eq 00000000-0000-0000-0000-000000000000 and ((Name eq 'mockOrg1' and City eq 'mockCity1'))"
       gLib.CreateContacts()
       expect(gLib.getOrganization).nthCalledWith(1, 'Customer', mockToken, mockBaseUrl, expectedGetOrgQuery)
@@ -136,7 +144,7 @@ describe('Contacts', () => {
       expect(mockUi.alert).toHaveBeenCalledWith('All contacts created successfully')
     })
     it('correctly calls getOrganization the correct number of times', () => {
-      gLib.getSpreadSheetData.mockReturnValue([mockRow1, mockRow2, mockRow3])
+      mockGetSpreadSheetData.mockReturnValue([mockRow1, mockRow2, mockRow3])
       const expectedQuery1 = "?$filter=EstimateREF eq 00000000-0000-0000-0000-000000000000 and ((Name eq 'mockOrg1' and City eq 'mockCity1'))"
       const expectedQuery2 = "?$filter=EstimateREF eq 00000000-0000-0000-0000-000000000000 and ((Name eq 'mockOrg2' and City eq 'mockCity2'))"
       const expectedQuery3 = "?$filter=EstimateREF eq 00000000-0000-0000-0000-000000000000 and ((Name eq 'mockOrg3' and City eq 'mockCity3'))"
@@ -147,8 +155,8 @@ describe('Contacts', () => {
       expect(gLib._createContacts).toHaveBeenCalledWith([mockContactDTO1, mockContactDTO2, mockContactDTO3], mockToken, mockBaseUrl)
     })
     it('correctly logs errors from _createContacts when rows fail.', () => {
-      gLib.getSpreadSheetData.mockReturnValue([mockRow1, mockRow2, mockRow3])
-      gLib._createContacts.mockReturnValue([2,3,4])
+      mockGetSpreadSheetData.mockReturnValue([mockRow1, mockRow2, mockRow3])
+      mockCreateContacts.mockReturnValue([2,3,4])
       gLib.CreateContacts()
       expect(gLib.highlightRows).toHaveBeenCalledWith([2,3,4], 'red')
       expect(mockUi.alert).toHaveBeenCalledWith('Some contacts failed to be created at rows: 2, 3, 4')

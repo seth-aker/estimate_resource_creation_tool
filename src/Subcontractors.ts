@@ -4,7 +4,7 @@ interface ISubcontractorRow {
     Address2?: string,
     City: string,
     State?: string,
-    Zip?: number,
+    Zip?: string,
     Country?: string,
     Phone?: string,
     WebAddress?: string,
@@ -141,7 +141,7 @@ function _createSubcontractors(subcontractorData: ISubcontractorRow[], token: st
         return options
     })
     try {
-        const responses = UrlFetchApp.fetchAll(batchOptions)
+        const responses = batchFetch(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -188,7 +188,7 @@ function _createSubcontractorCategories(categories: string[], token: string, bas
         return options
     }) 
     try {
-        const responses = UrlFetchApp.fetchAll(batchOptions)
+        const responses = batchFetch(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -229,7 +229,7 @@ function _addSubcontractorWorkTypes(workTypePayloads: ISubconWorkTypePayload[], 
         muteHttpExceptions: true
     }))
     try {
-        const responses = UrlFetchApp.fetchAll(batchOptions)
+        const responses = batchFetch(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -259,7 +259,7 @@ function _addSubcontractorSubWorkTypes(workTypePayloads: ISubconWorkTypePayload[
     }))
     const failedSubcontractorWorkSubTypes: ISubconWorkTypePayload[] = []
     try {
-        const responses = UrlFetchApp.fetchAll(batchOptions)
+        const responses = batchFetch(batchOptions)
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
