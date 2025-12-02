@@ -31,8 +31,8 @@ function CreateMiscellaneous(systemOfMeasure: TSystemOfMeasure) {
     SpreadsheetApp.getUi().alert('No data to send!');
     return;
   }
-  // const miscCategories = miscRows.map(row => row.MiscellaneousCategory)
-  // const failedRows = _createMiscCategories(miscCategories, token, baseUrl)
+  // const miscCategories = miscRows.map(row => row.MiscellaneousCategory).filter(each => each != undefined).filter(each => each != "");
+  // const failedCategories = _createMiscCategories(miscCategories, token, baseUrl)
   const dtos = miscRows.map(row => {
     return createMiscDTOFromRow(row, systemOfMeasure)
   })

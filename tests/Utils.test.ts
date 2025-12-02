@@ -1,9 +1,7 @@
 import { gasRequire } from 'tgas-local'
 import { vi, beforeEach, expect, describe, it } from 'vitest'
-import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockSpreadsheet, mockRange} from './mocks';
-const mockUtilities = {
-  sleep: vi.fn()
-}
+import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockSpreadsheet, mockRange, mockUtilities} from './mocks';
+
 const mocks = {
   SpreadsheetApp: mockSpreadsheetApp,
   UrlFetchApp: mockUrlFetchApp,
@@ -237,24 +235,45 @@ describe("Utils Tests", () => {
     it('should call UrlFetchApp multiple times for large number of batchOptions', () => {
       let largeArray: string[] = new Array(500)
       largeArray = largeArray.fill('option')
-      mockUrlFetchApp.fetchAll.mockImplementation((options: string[]) => new Array(options.length).fill('returnValues'))
+      mockUrlFetchApp.fetchAll.mockImplementation((options: string[]) => new Array(options.length).fill({getResponseCode: () => 201, getContentText: () => "Message"}))
       const results = glib.batchFetch(largeArray)
       expect(results.length).toBe(500)
-      expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledTimes(5)
-      expect(mockUtilities.sleep).toHaveBeenCalledTimes(4)
+      expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledTimes(Math.ceil(largeArray.length / glib.DEFAULT_BATCH_SIZE));
+      expect(mockUtilities.sleep).toHaveBeenCalledTimes(Math.ceil(largeArray.length / glib.DEFAULT_BATCH_SIZE));
     })
-    it('should not call sleep if only making one api call', () => {
+    it('should not call sleep more than once if only making one api call', () => {
       const array = ['option', 'option', 'option']
-      mockUrlFetchApp.fetchAll.mockImplementation((options: string[]) => new Array(options.length).fill('returnValues'))
+      mockUrlFetchApp.fetchAll.mockImplementation((options: string[]) => new Array(options.length).fill({getResponseCode: () => 201, getContentText: () => "Message"}))
       const results = glib.batchFetch(array)
       expect(results.length).toBe(3)
-      expect(glib.Utilities.sleep).not.toHaveBeenCalled()
+      expect(mockUtilities.sleep).toHaveBeenCalledOnce();
     })
     it('should not make any calls if batch length is 0', () => {
       const array: string[] = []
       const results = glib.batchFetch(array)
       expect(results.length).toBe(0)
       expect(mockUrlFetchApp.fetchAll).not.toHaveBeenCalled()
+    })
+    it('should retry when UrlFetchApp returns with 500 timeout repsonse', () => {
+      const array = ['1', '2', '3', '4', '5'];
+      mockUrlFetchApp.fetchAll.mockImplementation((values: string[]) => values.map(each => ({getResponseCode: () => 201, getContentText: () => each})))
+      mockUrlFetchApp.fetchAll.mockImplementationOnce((values: string[]) => {
+        return values.map((each, index) => {
+          return index === 0 ? {
+            getResponseCode: () =>  500,
+            getContentText: () => "Connection Timeout Expired."
+          } :
+          {
+            getResponseCode: () => 201,
+            getContentText: () => each
+          }
+        })
+      })
+
+      const results = glib.batchFetch(array);
+      expect(results.length).toBe(array.length)
+      expect(results[0].getContentText()).toBe(array[0]);
+      expect(mockUtilities.sleep).toHaveBeenCalledTimes(2)
     })
   })
 })

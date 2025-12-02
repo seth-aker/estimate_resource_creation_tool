@@ -1,11 +1,12 @@
 import { vi, describe, it, beforeEach, expect, beforeAll} from 'vitest'
 import { gasRequire } from 'tgas-local'
-import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp } from './mocks'
+import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUtilities } from './mocks'
 const mocks = {
     SpreadsheetApp: mockSpreadsheetApp,
     UrlFetchApp: mockUrlFetchApp,
     Logger: mockLogger,
-    PropertiesService: mockPropertiesService
+    PropertiesService: mockPropertiesService,
+    Utilities: mockUtilities
 }
 const gLib = gasRequire('./src', mocks)
 
@@ -41,7 +42,7 @@ describe('Customers', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([
         { getResponseCode: () => 400, getContentText: () => 'Error' },
         { getResponseCode: () => 500, getContentText: () => 'Error' },
-        { getResponseCode: () => 201 }
+        { getResponseCode: () => 201, getContentText: () => '' }
       ])
       const response = gLib._createCustomerCategories(categories, mockToken, mockBaseUrl)
       
@@ -52,9 +53,9 @@ describe('Customers', () => {
     it('returns successfully when response is 409 or 200', () => {
       const categories = ['cat1', 'cat2', 'cat3']
       mockUrlFetchApp.fetchAll.mockReturnValue([
-        { getResponseCode: () => 409 },
-        { getResponseCode: () => 200 },
-        { getResponseCode: () => 201 }
+        { getResponseCode: () => 409, getContentText: () => 'cat1' },
+        { getResponseCode: () => 200, getContentText: () => 'cat2' },
+        { getResponseCode: () => 201, getContentText: () => 'cat3' }
       ])
       const response = gLib._createCustomerCategories(categories, mockToken, mockBaseUrl)
       
@@ -65,8 +66,8 @@ describe('Customers', () => {
     it('returns successfully when response is 201', () => {
       const categories = ['cat1', 'cat2', 'cat3']
       mockUrlFetchApp.fetchAll.mockReturnValue([
-        { getResponseCode: () => 201 },
-        { getResponseCode: () => 201 }
+        { getResponseCode: () => 201, getContentText: () => 'cat1' },
+        { getResponseCode: () => 201, getContentText: () => 'cat2' }
       ])
       const response = gLib._createCustomerCategories(categories, mockToken, mockBaseUrl)
       
@@ -91,8 +92,8 @@ describe('Customers', () => {
     })
     it('logs customer already existed in the database', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([
-        { getResponseCode: () => 409 },
-        { getResponseCode: () => 200 }
+        { getResponseCode: () => 409, getContentText: () => '' },
+        { getResponseCode: () => 200, getContentText: () => '' }
       ])
       const failedRows = gLib._createCustomers([mockCustomerRow1, mockCustomerRow2], mockToken, mockBaseUrl)
 
@@ -102,8 +103,8 @@ describe('Customers', () => {
     })
     it('correctly logs when all responses are 201', () => {
        mockUrlFetchApp.fetchAll.mockReturnValue([
-        { getResponseCode: () => 201 },
-        { getResponseCode: () => 201 }
+        { getResponseCode: () => 201, getContentText: () => '' },
+        { getResponseCode: () => 201, getContentText: () => '' }
       ])
       const failedRows = gLib._createCustomers([mockCustomerRow1, mockCustomerRow2], mockToken, mockBaseUrl)
 

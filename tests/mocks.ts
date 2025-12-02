@@ -53,7 +53,9 @@ export const mockPropertiesService = {
   getScriptProperties: vi.fn(() => mockPropertiesObject)
 }
 export const mockAuthenticate = vi.fn(() => ({token: 'mockToken', baseUrl: 'mockBaseUrl.com'}))
-
+export const mockUtilities = {
+  sleep: vi.fn()
+}
 // mockSpreadsheetApp.getActiveSpreadsheet.mockReturnValue(mockSpreadsheetApp);
 // mockSpreadsheetApp.getActiveSheet.mockReturnValue(mockSpreadsheetApp);
 // mockSpreadsheetApp.getRange.mockReturnValue(mockSpreadsheetApp);

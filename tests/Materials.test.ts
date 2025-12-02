@@ -1,12 +1,13 @@
 import { vi, describe, it, beforeEach, expect, beforeAll} from 'vitest'
 import { gasRequire } from 'tgas-local'
-import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUserProperties } from './mocks'
+import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUserProperties, mockUtilities } from './mocks'
 
 const mocks = {
     SpreadsheetApp: mockSpreadsheetApp,
     UrlFetchApp: mockUrlFetchApp,
     Logger: mockLogger,
-    PropertiesService: mockPropertiesService
+    PropertiesService: mockPropertiesService,
+    Utilities: mockUtilities
 }
 const gLib = gasRequire('./src', mocks)
 const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000"
@@ -220,10 +221,10 @@ describe('Materials', () => {
       }))
       mockUrlFetchApp.fetchAll.mockReturnValue([
         {
-          getResponseCode: () => 200,
+          getResponseCode: () => 200, getContentText: () => ''
         },
         {
-          getResponseCode: () => 409,
+          getResponseCode: () => 409, getContentText: () => ''
         }
       ])
       const {failedMaterials, createdMaterials} = gLib._createMaterials([mockMaterialDTO, mockMaterialDTO2], mockToken, mockBaseUrl)

@@ -1,6 +1,6 @@
 // Work types require a EstimateREF to be sent with the post, use this as a dummy ref
 const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000";
-const DEFAULT_BATCH_SIZE = 100
+const DEFAULT_BATCH_SIZE = 50;
 
 type TOrganizationDTO = ISubcontractorDTO | ICustomerRow | IVendorDTO
 interface ICategoryItem {
@@ -79,7 +79,9 @@ function createHeaders(token: string, additionalHeaders?: Record<string, string>
         ...additionalHeaders
     }
 }
-function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[]) {
+function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[], retryCount: number = 0) {
+  Utilities.sleep(retryCount * retryCount * 1000);
+  
   const sliceNumber = Math.ceil(batchOptions.length / DEFAULT_BATCH_SIZE)
   const responses: GoogleAppsScript.URL_Fetch.HTTPResponse[] = []
 
@@ -87,8 +89,25 @@ function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchR
     responses.push(...UrlFetchApp.fetchAll(batchOptions.slice(i * DEFAULT_BATCH_SIZE, (i + 1) * DEFAULT_BATCH_SIZE)))
     // if only one call is being made or on the last call, don't sleep
     if(sliceNumber > 1 && i < sliceNumber - 1) {
-      Utilities.sleep(500)
+      Utilities.sleep(1000)
     }
+  }
+  const retries: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[] = [];
+  const responseIndices: number[] = []; 
+  responses.forEach((response, index) => {
+    const responseCode = response.getResponseCode()
+    const responseMessage = response.getContentText();
+    if(responseCode === 500 && responseMessage.includes("Connection Timeout Expired.")) {
+      retries.push(batchOptions[index])
+      responseIndices.push(index);
+    }
+  })
+  if(retryCount < 5 && retries.length > 0) {
+    Logger.log(`${retries.length} entries failed due to connection timeout, retrying...`)
+    const retryResponses = batchFetch(retries, retryCount++);
+    retryResponses.forEach((response, index) => {
+      responses[responseIndices[index]] = response;
+    })
   }
   return responses
 }

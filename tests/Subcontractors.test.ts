@@ -1,6 +1,6 @@
 import { vi, describe, it, beforeEach, expect, beforeAll} from 'vitest'
 import { gasRequire } from 'tgas-local'
-import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUserProperties } from './mocks'
+import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUserProperties, mockUtilities } from './mocks'
 
 const mockGetDBCategoryList = vi.fn()
 const mockGetDBSubcategoryList = vi.fn()
@@ -10,7 +10,8 @@ const mocks = {
     SpreadsheetApp: mockSpreadsheetApp,
     UrlFetchApp: mockUrlFetchApp,
     Logger: mockLogger,
-    PropertiesService: mockPropertiesService
+    PropertiesService: mockPropertiesService,
+    Utilities: mockUtilities
 }
 const gLib = gasRequire('./src', mocks)
 gLib.getDBCategoryList = mockGetDBCategoryList
@@ -88,7 +89,7 @@ describe("Subcontractors", () => {
         it('should handle existing categories', () => {
             const categories = ['Cat1', 'Cat2'];
             const mockResponses = categories.map(() => ({
-                getResponseCode: () => 409
+                getResponseCode: () => 409, getContentText: () => ''
             }));
             mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
             const expectedCategories = [{ Name: 'Cat1' }, { Name: 'Cat2' }];
@@ -191,7 +192,7 @@ describe("Subcontractors", () => {
 
         it('should add work types successfully', () => {
             const mockResponses = workTypePayloads.map(() => ({
-                getResponseCode: () => 201
+                getResponseCode: () => 201, getContentText: () => ''
             }));
             mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
             const expectedOptions = workTypePayloads.map(payload => ({
@@ -241,7 +242,7 @@ describe("Subcontractors", () => {
 
         it('should add work subtypes successfully', () => {
             const mockResponses = workSubTypePayloads.map(() => ({
-                getResponseCode: () => 201
+                getResponseCode: () => 201, getContentText: () => ''
             }));
             mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses);
             const expectedOptions = workSubTypePayloads.map(payload => ({

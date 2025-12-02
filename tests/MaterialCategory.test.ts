@@ -1,6 +1,6 @@
 import { vi, describe, it, beforeEach, expect} from 'vitest'
 import { gasRequire } from 'tgas-local'
-import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUserProperties } from './mocks'
+import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUserProperties, mockUtilities } from './mocks'
 const mockGetDBSubcategoryList = vi.fn()
 const mockGetDBCategoryList = vi.fn()
 const mockGetSpreadSheetData = vi.fn()
@@ -8,7 +8,8 @@ const mocks = {
     SpreadsheetApp: mockSpreadsheetApp,
     UrlFetchApp: mockUrlFetchApp,
     Logger: mockLogger,
-    PropertiesService: mockPropertiesService
+    PropertiesService: mockPropertiesService,
+    Utilities: mockUtilities
 }
 const gLib = gasRequire('./src', mocks)
 gLib.getDBSubcategoryList = mockGetDBSubcategoryList
@@ -79,7 +80,7 @@ describe("MaterialCategory", () => {
                 {parentRef: 'mockParentRef2', subcategory: 'mockSubcat3'}
             ]
             const mockResponses = mockSubcatParentMap.map((_) => ({
-                getResponseCode: () => 400
+                getResponseCode: () => 400, getContentText: () => ''
             }))
             const expectedBatchOptions = mockSubcatParentMap.map((each) => ({
                 url: mockBaseUrl + '/Resource/Subcategory/MaterialSubcategory',
@@ -113,7 +114,7 @@ describe("MaterialCategory", () => {
                 {parentRef: 'mockParentRef2', subcategory: 'mockSubcat3'}
             ]
             const mockResponses = mockSubcatParentMap.map((_) => ({
-                getResponseCode: () => 409
+                getResponseCode: () => 409, getContentText: () => ''
             }))
             mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses)
             const mockGetResponse = [{Name: 'mockSubcat1'}, {Name: 'mockSubcat2'}, {Name: 'mockSubcat3'}]
@@ -213,7 +214,7 @@ describe("MaterialCategory", () => {
                 'category3'
             ]
             const mockResponses = mockCategories.map((_) => ({
-                getResponseCode: () => 409
+                getResponseCode: () => 409, getContentText: () => ''
             }))
             mockUrlFetchApp.fetchAll.mockReturnValue(mockResponses)
             const mockGetResponse = [{Name: 'category1'}, {Name: 'category2'}, {Name: 'category3'}]

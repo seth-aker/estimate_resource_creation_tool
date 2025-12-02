@@ -1,6 +1,6 @@
 import { gasRequire } from 'tgas-local'
 import { vi, beforeEach, expect, describe, it, beforeAll } from 'vitest'
-import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockUi, mockPropertiesService, mockUserProperties } from './mocks';
+import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockUi, mockPropertiesService, mockUserProperties, mockUtilities } from './mocks';
 
 const mockGetDBSubcategoryList = vi.fn()
 const mockGetDBCategoryList = vi.fn()
@@ -11,7 +11,8 @@ const mocks = {
   SpreadsheetApp: mockSpreadsheetApp,
   UrlFetchApp: mockUrlFetchApp,
   Logger: mockLogger,
-  PropertiesService: mockPropertiesService
+  PropertiesService: mockPropertiesService,
+  Utilities: mockUtilities
   // __proto__: gas.globalMockDefaults
 }
 
@@ -152,8 +153,8 @@ describe('WorkTypes', () => {
         }
       })
       const mockReturnValues = [
-        { getResponseCode: () => 409 },
-        { getResponseCode: () => 200 },
+        { getResponseCode: () => 409, getContentText: () => '' },
+        { getResponseCode: () => 200, getContentText: () => '' },
       ]
       const expectedQuery = `?$filter=EstimateREF eq ${ESTIMATE_REF} and ((Name eq 'Paving' and CategoryREF eq ${mockWorkTypeID}) or (Name eq 'Demo' and CategoryREF eq ${mockWorkTypeID}))`
       mockUrlFetchApp.fetchAll.mockReturnValue(mockReturnValues)
@@ -271,8 +272,8 @@ describe('WorkTypes', () => {
         }
       })
       const mockReturnValues = [
-        { getResponseCode: () => 200},
-        { getResponseCode: () => 409}
+        { getResponseCode: () => 200, getContentText: () => ''},
+        { getResponseCode: () => 409, getContentText: () => ''}
       ]
       mockUrlFetchApp.fetchAll.mockReturnValue(mockReturnValues)
       const mockReturnAsphalt = {

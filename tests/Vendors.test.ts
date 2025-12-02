@@ -1,6 +1,6 @@
 import { vi, describe, it, beforeEach, expect, beforeAll} from 'vitest'
 import { gasRequire } from 'tgas-local'
-import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp } from './mocks'
+import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUtilities } from './mocks'
 
 // const mockGetDBCategoryList = vi.fn()
 // const mockGetDBSubcategoryList = vi.fn()
@@ -11,7 +11,8 @@ const mocks = {
     SpreadsheetApp: mockSpreadsheetApp,
     UrlFetchApp: mockUrlFetchApp,
     Logger: mockLogger,
-    PropertiesService: mockPropertiesService
+    PropertiesService: mockPropertiesService,
+    Utilities: mockUtilities
 }
 const gLib = gasRequire('./src', mocks)
 
@@ -34,7 +35,7 @@ describe('Vendors', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([
         { getResponseCode: () => 400, getContentText: () => 'Error'},
         { getResponseCode: () => 500, getContentText: () => 'Error'},
-        { getResponseCode: () => 201 }
+        { getResponseCode: () => 201, getContentText: () => '' }
       ])
       
       const expectedBatchOptions = mockPayloads.map(payload => ({
@@ -55,9 +56,9 @@ describe('Vendors', () => {
     })
     it('correctly logs categories that already exist in the database.', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([
-        { getResponseCode: () => 409 },
-        { getResponseCode: () => 200 },
-        { getResponseCode: () => 201 }
+        { getResponseCode: () => 409, getContentText: () => '' },
+        { getResponseCode: () => 200, getContentText: () => '' },
+        { getResponseCode: () => 201, getContentText: () => '' }
       ])
       const failedCategories = gLib._addVendorMaterialCategories(mockPayloads, false, mockToken, mockBaseUrl)
       expect(failedCategories).toEqual([])
@@ -66,9 +67,9 @@ describe('Vendors', () => {
     })
     it('correctly logs categories added to vendor', () => {
         mockUrlFetchApp.fetchAll.mockReturnValue([
-        { getResponseCode: () => 201 },
-        { getResponseCode: () => 201 },
-        { getResponseCode: () => 201 }
+        { getResponseCode: () => 201, getContentText: () => '' },
+        { getResponseCode: () => 201, getContentText: () => '' },
+        { getResponseCode: () => 201, getContentText: () => '' }
       ])
       const failedCategories = gLib._addVendorMaterialCategories(mockPayloads, false, mockToken, mockBaseUrl)
       expect(failedCategories).toEqual([])
@@ -80,8 +81,8 @@ describe('Vendors', () => {
     it('correctly calls endpoints and logs exceptions when isSubCat is true', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([
         { getResponseCode: () => 400, getContentText: () => 'Error' },
-        { getResponseCode: () => 409 },
-        { getResponseCode: () => 201 }
+        { getResponseCode: () => 409, getContentText: () => '' },
+        { getResponseCode: () => 201, getContentText: () => '' }
       ])
       const mockSubCatPayloads: IVendorMaterialPayload[] = [
         { OrganizationREF: 'mockOrgREF', MaterialSubcategoryREF: 'subCatREF1'},
@@ -168,8 +169,8 @@ describe('Vendors', () => {
         {Name: 'mockVendor2', City: 'MockCity'},
       ])
       mockUrlFetchApp.fetchAll.mockReturnValue([
-        { getResponseCode: () => 409 },
-        { getResponseCode: () => 200 },
+        { getResponseCode: () => 409, getContentText: () => '' },
+        { getResponseCode: () => 200, getContentText: () => '' },
         { getResponseCode: () => 201, getContentText: () => (JSON.stringify({Item: {Name: 'mockVendor3', City: 'mockCity', Category: 'VendorCategory2'}}))}
       ])
       const expectedQuery = `?$filter=EstimateREF eq 00000000-0000-0000-0000-000000000000 and ((Name eq 'mockVendor1' and City eq 'mockCity') or (Name eq 'mockVendor2' and City eq 'mockCity'))`
@@ -214,8 +215,8 @@ describe('Vendors', () => {
     })
     it('returns no failed categories when response is 409 and fetches pre-existing categories', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([
-        { getResponseCode: () => 409 },
-        { getResponseCode: () => 200 },
+        { getResponseCode: () => 409, getContentText: () => '' },
+        { getResponseCode: () => 200, getContentText: () => '' },
         { getResponseCode: () => 201, getContentText: () => (JSON.stringify({ Item: 'Cat3Response Object'}))}
       ])
       

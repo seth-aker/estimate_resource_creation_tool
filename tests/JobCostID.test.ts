@@ -1,12 +1,13 @@
 import { gasRequire } from 'tgas-local'
 import { vi, beforeEach, expect, describe, it } from 'vitest'
-import { mockSpreadsheetApp, mockUrlFetchApp, mockUi, mockLogger, mockAuthenticate, mockRange, mockSheet, mockPropertiesService } from './mocks';
+import { mockSpreadsheetApp, mockUrlFetchApp, mockUi, mockLogger, mockAuthenticate, mockRange, mockSheet, mockPropertiesService, mockUtilities } from './mocks';
 
 const mocks = {
   SpreadsheetApp: mockSpreadsheetApp,
   UrlFetchApp: mockUrlFetchApp,
   Logger: mockLogger,
-  PropertiesService: mockPropertiesService
+  PropertiesService: mockPropertiesService,
+  Utilities: mockUtilities
   // __proto__: gas.globalMockDefaults
 }
 
@@ -36,8 +37,8 @@ describe('CreateJCIDS', () => {
       {Description: 'Dummy data2', Code: 'moreDummyData2'}
     ])
     mockUrlFetchApp.fetchAll.mockReturnValue([
-      { getResponseCode: () => 201 },
-      { getResponseCode: () => 201 }
+      { getResponseCode: () => 201, getContentText: () => '' },
+      { getResponseCode: () => 201, getContentText: () => '' }
     ])
     glib.CreateJCIDS()
     
@@ -53,7 +54,7 @@ describe('CreateJCIDS', () => {
     ])
     mockUrlFetchApp.fetchAll.mockReturnValue([
       { getResponseCode: () => 400, getContentText: () => 'Error' },
-      { getResponseCode: () => 201 }
+      { getResponseCode: () => 201, getContentText: () => '' }
     ])
     glib.CreateJCIDS()
 

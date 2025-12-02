@@ -1,12 +1,13 @@
 import { vi, describe, it, beforeEach, expect, beforeAll} from 'vitest'
 import { gasRequire } from 'tgas-local'
-import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp } from './mocks'
+import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUtilities } from './mocks'
 
 const mocks = {
     SpreadsheetApp: mockSpreadsheetApp,
     UrlFetchApp: mockUrlFetchApp,
     Logger: mockLogger,
-    PropertiesService: mockPropertiesService
+    PropertiesService: mockPropertiesService,
+    Utilities: mockUtilities
 }
 const gLib = gasRequire('./src', mocks)
 
@@ -75,7 +76,7 @@ describe('Miscellaneous', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([
         { getResponseCode: () => 400, getContentText: () => "Error" },
         { getResponseCode: () => 500, getContentText: () => "Error" },
-        { getResponseCode: () => 201 }
+        { getResponseCode: () => 201, getContentText: () => '' }
       ])
       const dtos= [
         {rowData: 'data'},
@@ -89,9 +90,9 @@ describe('Miscellaneous', () => {
     })
     it('returns no failed rows when rows already exist or are created', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([
-        { getResponseCode: () => 409 },
-        { getResponseCode: () => 200 },
-        { getResponseCode: () => 201 }
+        { getResponseCode: () => 409, getContentText: () => '' },
+        { getResponseCode: () => 200, getContentText: () => '' },
+        { getResponseCode: () => 201, getContentText: () => '' }
       ])
       const dtos = [
         {rowData: 'data'},
