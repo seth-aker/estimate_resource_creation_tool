@@ -104,7 +104,7 @@ function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchR
   })
   if(retryCount < 5 && retries.length > 0) {
     Logger.log(`${retries.length} entries failed due to connection timeout, retrying...`)
-    const retryResponses = batchFetch(retries, retryCount++);
+    const retryResponses = batchFetch(retries, retryCount + 1);
     retryResponses.forEach((response, index) => {
       responses[responseIndices[index]] = response;
     })

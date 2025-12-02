@@ -269,11 +269,31 @@ describe("Utils Tests", () => {
           }
         })
       })
-
+      
       const results = glib.batchFetch(array);
       expect(results.length).toBe(array.length)
       expect(results[0].getContentText()).toBe(array[0]);
       expect(mockUtilities.sleep).toHaveBeenCalledTimes(2)
+    })
+    it('should retry max of 5 times when 500 response continues', () => {
+      mockUrlFetchApp.fetchAll.mockImplementation((values: []) => { 
+          return values.map((each, index) => {
+          return index === 0 ? {
+            getResponseCode: () =>  500,
+            getContentText: () => "Connection Timeout Expired."
+          } :
+          {
+            getResponseCode: () => 201,
+            getContentText: () => each
+          }
+        })
+      })
+      const array = ['1', '2', '3', '4', '5'];
+      const results = glib.batchFetch(array);
+      expect(results.length).toBe(array.length)
+      expect(results[0].getContentText()).toBe("Connection Timeout Expired.")
+      expect(mockUtilities.sleep).toHaveBeenCalledTimes(6)
+      expect(mockLogger.log).toHaveBeenCalledTimes(5)
     })
   })
 })
