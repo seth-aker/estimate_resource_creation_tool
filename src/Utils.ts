@@ -209,8 +209,9 @@ function getDBSubcategoryList(subcategoryName: string, token: string, baseUrl: s
 
 function highlightRows(rowIndices: number[], color: string) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet()
+  const lastColumn = sheet.getLastColumn()
     rowIndices.forEach((row) => {
-      sheet.getRange(row, 1,1, sheet.getLastColumn()).setBackground(color)
+      sheet.getRange(row, 1,1, lastColumn).setBackground(color)
     })
 }
 
