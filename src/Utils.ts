@@ -80,15 +80,18 @@ function createHeaders(token: string, additionalHeaders?: Record<string, string>
     }
 }
 function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[], retryCount: number = 0) {
-  Utilities.sleep(retryCount * retryCount * 1000);
-  
-  const sliceNumber = Math.ceil(batchOptions.length / DEFAULT_BATCH_SIZE)
-  const responses: GoogleAppsScript.URL_Fetch.HTTPResponse[] = []
+  Utilities.sleep(retryCount * retryCount * 1000); // Exponential Backoff
 
-  for(let i = 0; i < sliceNumber; i++) {
-    responses.push(...UrlFetchApp.fetchAll(batchOptions.slice(i * DEFAULT_BATCH_SIZE, (i + 1) * DEFAULT_BATCH_SIZE)))
+  const sliceCount = Math.ceil(batchOptions.length / DEFAULT_BATCH_SIZE)
+  const responses: GoogleAppsScript.URL_Fetch.HTTPResponse[] = []
+  
+  for(let i = 0; i < sliceCount; i++) {
+    if(retryCount === 0) {
+      SpreadsheetApp.getUi().alert(`Posting batch ${i + 1} of ${sliceCount}`)
+    }
+    responses.push(...UrlFetchApp.fetchAll(batchOptions.slice(i * DEFAULT_BATCH_SIZE, (i + 1) * DEFAULT_BATCH_SIZE))) // passing a value greater than the length of the array will include all values to the end of the array.
     // if only one call is being made or on the last call, don't sleep
-    if(sliceNumber > 1 && i < sliceNumber - 1) {
+    if(sliceCount > 1 && i < sliceCount - 1) {
       Utilities.sleep(1000)
     }
   }
@@ -104,6 +107,7 @@ function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchR
   })
   if(retryCount < 5 && retries.length > 0) {
     Logger.log(`${retries.length} entries failed due to connection timeout, retrying...`)
+    SpreadsheetApp.getUi().alert(`${retries.length} entries failed due to connection timeout, retrying...`)
     const retryResponses = batchFetch(retries, retryCount + 1);
     retryResponses.forEach((response, index) => {
       responses[responseIndices[index]] = response;
