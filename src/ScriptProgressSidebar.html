@@ -14,7 +14,7 @@
         console.log(`Progress Received: current batch Number: ${batchProgress.batchNumber} out of ${batchProgress.totalBatches}`)
         const progressPercent = (batchProgress.batchNumber/(batchProgress.totalBatches ?? 1)) * 100;
         const progressBar = document.getElementById("progressBar");
-        const progressBarLabel = document.getElementById("progressBarLabel").innerText = `Percent Complete: ${progressPercent}%`;
+        const progressBarLabel = document.getElementById("progressBarLabel").innerText = `Percent Complete: ${progressPercent.toFixed(2)}%`;
         const logText = document.getElementById("log")
         if(batchProgress && progressPercent >= 100) {
           progressBar.value = 100;
