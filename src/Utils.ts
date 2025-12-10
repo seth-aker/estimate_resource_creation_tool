@@ -33,6 +33,11 @@ interface IOrganizationGetResponse {
 }
 type TSpreadsheetValues = Number | Boolean | Date | String
 
+interface IBatchProgress {
+  batchNumber: number,
+  totalBatches: number
+}
+
 function getSpreadSheetData<T>(spreadsheetName: string): T[] {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(spreadsheetName);
   if(!sheet) throw new Error(`Could not find spreadsheet: "${spreadsheetName}"`)
@@ -79,16 +84,36 @@ function createHeaders(token: string, additionalHeaders?: Record<string, string>
         ...additionalHeaders
     }
 }
+
+function setProgress(batchNumber: number, totalBatches: number) {
+  const batchProgress = {
+    batchNumber,
+    totalBatches
+  }
+  CacheService.getUserCache().put("BatchProgress", JSON.stringify(batchProgress))
+}
+
+function getProgressFromServer() {
+  const batchProgress: IBatchProgress = JSON.parse(CacheService.getUserCache().get('BatchProgress') ?? "") ?? {batchNumber: 0, totalBatches: 0};
+  return batchProgress;
+}
+
+function openProgressSidebar() {
+  const html = HtmlService.createHtmlOutputFromFile('ScriptProgressSidebar')
+    .setTitle("Script Progress")
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
 function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[], retryCount: number = 0) {
   Utilities.sleep(retryCount * retryCount * 1000); // Exponential Backoff
+  
+  openProgressSidebar()
 
   const sliceCount = Math.ceil(batchOptions.length / DEFAULT_BATCH_SIZE)
   const responses: GoogleAppsScript.URL_Fetch.HTTPResponse[] = []
   
   for(let i = 0; i < sliceCount; i++) {
-    if(retryCount === 0) {
-      SpreadsheetApp.getUi().alert(`Posting batch ${i + 1} of ${sliceCount}`)
-    }
+    setProgress(i+1, sliceCount);
     responses.push(...UrlFetchApp.fetchAll(batchOptions.slice(i * DEFAULT_BATCH_SIZE, (i + 1) * DEFAULT_BATCH_SIZE))) // passing a value greater than the length of the array will include all values to the end of the array.
     // if only one call is being made or on the last call, don't sleep
     if(sliceCount > 1 && i < sliceCount - 1) {

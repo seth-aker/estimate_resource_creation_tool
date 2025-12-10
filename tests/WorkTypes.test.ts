@@ -1,6 +1,6 @@
 import { gasRequire } from 'tgas-local'
 import { vi, beforeEach, expect, describe, it, beforeAll } from 'vitest'
-import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockUi, mockPropertiesService, mockUserProperties, mockUtilities } from './mocks';
+import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockUi, mockPropertiesService, mockUserProperties, mockUtilities, mockHtmlService, mockCacheService } from './mocks';
 
 const mockGetDBSubcategoryList = vi.fn()
 const mockGetDBCategoryList = vi.fn()
@@ -12,7 +12,9 @@ const mocks = {
   UrlFetchApp: mockUrlFetchApp,
   Logger: mockLogger,
   PropertiesService: mockPropertiesService,
-  Utilities: mockUtilities
+  Utilities: mockUtilities,
+  HtmlService: mockHtmlService,
+  CacheService: mockCacheService
   // __proto__: gas.globalMockDefaults
 }
 

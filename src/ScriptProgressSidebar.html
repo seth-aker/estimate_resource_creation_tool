@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body>
+    <div id="log"></div>
+    <label id="progressBarLabel" for="progressBar">Percent Complete: 0%</label>
+    <progress id="progressBar" value="0" max="100"></progress>
+  </body>
+  <script>
+    function getProgress() {
+      google.script.run.withSuccessHandler((batchProgress) => {
+        console.log(`Progress Received: current batch Number: ${batchProgress.batchNumber} out of ${batchProgress.totalBatches}`)
+        const progressPercent = (batchProgress.batchNumber/(batchProgress.totalBatches ?? 1)) * 100;
+        const progressBar = document.getElementById("progressBar");
+        const progressBarLabel = document.getElementById("progressBarLabel").innerText = `Percent Complete: ${progressPercent}%`;
+        const logText = document.getElementById("log")
+        if(batchProgress && progressPercent >= 100) {
+          progressBar.value = 100;
+          google.script.host.close()
+          return;
+        } else {
+          progressBar.value = progressPercent ?? 0;
+          logText.innerText = `Processing Batch ${batchProgress.batchNumber} of ${batchProgress.totalBatches}`
+        }
+        getProgress();
+      }).getProgressFromServer()
+    }
+    getProgress();
+  </script>
+</html>

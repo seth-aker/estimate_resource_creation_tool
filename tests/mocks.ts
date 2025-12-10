@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
 export const mockUi = {
-    alert: vi.fn()
+    alert: vi.fn(),
+    showSidebar: vi.fn()
 }
 export const mockRange = {
   setBackground: vi.fn(),
@@ -55,6 +56,15 @@ export const mockPropertiesService = {
 export const mockAuthenticate = vi.fn(() => ({token: 'mockToken', baseUrl: 'mockBaseUrl.com'}))
 export const mockUtilities = {
   sleep: vi.fn()
+}
+export const mockHtmlService = {
+  createHtmlOutputFromFile: vi.fn(() => mockHtmlService),
+  setTitle: vi.fn()
+}
+export const mockCacheService = {
+  getUserCache: vi.fn(() => mockCacheService),
+  put: vi.fn(),
+  get: vi.fn()
 }
 // mockSpreadsheetApp.getActiveSpreadsheet.mockReturnValue(mockSpreadsheetApp);
 // mockSpreadsheetApp.getActiveSheet.mockReturnValue(mockSpreadsheetApp);

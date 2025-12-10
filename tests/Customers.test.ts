@@ -1,12 +1,14 @@
 import { vi, describe, it, beforeEach, expect, beforeAll} from 'vitest'
 import { gasRequire } from 'tgas-local'
-import { mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUtilities } from './mocks'
+import { mockCacheService, mockHtmlService, mockLogger, mockPropertiesService, mockSpreadsheetApp, mockUi, mockUrlFetchApp, mockUtilities } from './mocks'
 const mocks = {
     SpreadsheetApp: mockSpreadsheetApp,
     UrlFetchApp: mockUrlFetchApp,
     Logger: mockLogger,
     PropertiesService: mockPropertiesService,
-    Utilities: mockUtilities
+    Utilities: mockUtilities,
+    HtmlService: mockHtmlService,
+    CacheService: mockCacheService
 }
 const gLib = gasRequire('./src', mocks)
 

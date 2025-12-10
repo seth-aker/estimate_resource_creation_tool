@@ -61,7 +61,7 @@ function CreateJCIDS() {
         sheet.getRange(row, 1,1, sheet.getLastColumn()).setBackground('red')
     })
     SpreadsheetApp.getUi().alert(`Some records failed to create or already existed in the database.
-      Pre-existingRows: [${existingRows.join(', ')}]
+      Pre-existing rows: [${existingRows.join(', ')}]
       Failed rows: [${failedRows.join(', ')}]`);
   }
 }

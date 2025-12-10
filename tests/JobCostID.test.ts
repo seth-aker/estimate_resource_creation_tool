@@ -1,13 +1,15 @@
 import { gasRequire } from 'tgas-local'
 import { vi, beforeEach, expect, describe, it } from 'vitest'
-import { mockSpreadsheetApp, mockUrlFetchApp, mockUi, mockLogger, mockAuthenticate, mockRange, mockSheet, mockPropertiesService, mockUtilities } from './mocks';
+import { mockSpreadsheetApp, mockUrlFetchApp, mockUi, mockLogger, mockAuthenticate, mockRange, mockSheet, mockPropertiesService, mockUtilities, mockHtmlService, mockCacheService } from './mocks';
 
 const mocks = {
   SpreadsheetApp: mockSpreadsheetApp,
   UrlFetchApp: mockUrlFetchApp,
   Logger: mockLogger,
   PropertiesService: mockPropertiesService,
-  Utilities: mockUtilities
+  Utilities: mockUtilities,
+  HtmlService: mockHtmlService,
+  CacheService: mockCacheService
   // __proto__: gas.globalMockDefaults
 }
 
@@ -64,7 +66,7 @@ describe('CreateJCIDS', () => {
     expect(mockSheet.getRange).toHaveBeenCalledWith(2, 1,1, undefined)
     expect(mockRange.setBackground).toHaveBeenCalledWith('red')
     expect(mockUi.alert).toHaveBeenCalledWith(`Some records failed to create or already existed in the database.
-      Pre-existingRows: []
+      Pre-existing rows: []
       Failed rows: [2]`)
   })
 })
