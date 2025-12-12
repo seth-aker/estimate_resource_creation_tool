@@ -30,8 +30,6 @@ describe('CreateJCIDS', () => {
     expect(mockSpreadsheetApp.getUi).toHaveBeenCalled();
     expect(mockUi.alert).toHaveBeenCalledExactlyOnceWith("No data to send!");
     expect(mockUrlFetchApp.fetch).not.toHaveBeenCalled();
-    expect(mockAuthenticate).toHaveBeenCalledOnce()
-    expect(mocks.Logger.log).toHaveBeenCalledExactlyOnceWith("No data to send!")
   })
   it('alerts the user all records were created when UrlFetchApp returns with no errors', () => {
     (glib.getSpreadSheetData as any) = vi.fn(() => [

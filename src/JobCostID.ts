@@ -33,14 +33,14 @@ function CreateJCIDS() {
     const responses = batchFetch(batchOptions)
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
-      if(responseCode < 400) {
-        Logger.log(`Row ${index + 2}: Successfully created`);
-      } else if (responseCode === 409 || responseCode === 200) {
+      if (responseCode === 409 || responseCode === 200) {
         Logger.log(`Row ${index + 2}: Already exists in the database.`)
         existingRows.push(index + 2)
-      } else {
+      } else if (responseCode <= 400) {
         Logger.log(`Row ${index + 2}: Failed with status code ${responseCode}. Error: ${response.getContentText()}`);
         failedRows.push(index + 2) // Adding failed row to the list (i + 2 because of header row)
+      } else {
+        Logger.log(`Row ${index + 2}: Successfully created`);
       }
     })
   } catch (err) {
