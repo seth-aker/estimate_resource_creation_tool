@@ -34,9 +34,9 @@ function CreateJCIDS() {
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
       if (responseCode === 409 || responseCode === 200) {
-        Logger.log(`Row ${index + 2}: Already exists in the database.`)
+        Logger.log(`Row ${index + 2}: Already exists in the database. Status Code: ${responseCode}. Error: ${response.getContentText()}`)
         existingRows.push(index + 2)
-      } else if (responseCode <= 400) {
+      } else if (responseCode >= 400) {
         Logger.log(`Row ${index + 2}: Failed with status code ${responseCode}. Error: ${response.getContentText()}`);
         failedRows.push(index + 2) // Adding failed row to the list (i + 2 because of header row)
       } else {
