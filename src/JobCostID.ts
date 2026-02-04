@@ -4,6 +4,8 @@ interface IJobCostID {
   EstimateREF?: string,
   ObjectID?: string
 }
+type IUpdateType = "update-JCID-code" | "update-JCID-desc";
+
 function CreateJCIDS() {
   const {token, baseUrl} = authenticate() // from Authenticate.gs
   const data = getSpreadSheetData<IJobCostID>('Job Cost IDs')
@@ -66,3 +68,112 @@ function CreateJCIDS() {
   }
 }
 
+function UpdateJCIDS(update: IUpdateType) {
+  const {token, baseUrl} = authenticate() // from Authenticate.gs
+  const data = getSpreadSheetData<IJobCostID>('Job Cost IDs')
+  
+  // Check if no data and quit
+  if (!data || data.length === 0) {
+    Logger.log("No data to send!");
+    SpreadsheetApp.getUi().alert('No data to send!');
+    return;
+  }
+
+  const query = buildUpdateQuery(update, data);
+  const failures: number[] = [];
+  
+  try {
+    const jcids = getJCIDS(baseUrl, query, token);
+    
+    // Optimize search for jcid maping
+    const lookupMap = new Map();
+    const isUpdateCode = (update === 'update-JCID-code');
+
+    data.forEach(el => {
+      const key = isUpdateCode ? el.Description : el.Code;
+      const val = isUpdateCode ? el.Code : el.Description;
+      lookupMap.set(key, val);    
+    })
+    jcids.forEach(item => {
+      if(isUpdateCode) {
+        item.Code = lookupMap.get(item.Description) ?? item.Code;
+      } else {
+        item.Description = lookupMap.get(item.Code) ?? item.Description;
+      }
+    })
+
+    const headers = createHeaders(token)
+    const batchOptions = jcids.map(jcid => ({
+      url: baseUrl + "/Resource/JobCostID",
+      headers,
+      method: "put" as const,
+      payload: JSON.stringify(jcid),
+      muteHttpExceptions: true
+    }));
+
+    const responses = batchFetch(batchOptions);
+    responses.forEach((response, index) => {
+      const responseCode = response.getResponseCode();
+      if(responseCode !== 200) {
+        Logger.log(`JCID with code: ${jcids[index].Code} and description: ${jcids[index].Description} failed to update with error code: ${responseCode}, ${response.getContentText()}`)
+        failures.push(index)
+      } else {
+        Logger.log(`JCID with code:  ${jcids[index].Code} and description: ${jcids[index].Description} successfully updated`)
+      }
+    })
+
+    if(failures.length > 0) {
+      const failedRows = failures.map(i => {
+        return data.findIndex((row) => {
+          if(isUpdateCode) {
+            return row.Description === jcids[i].Description
+          } else {
+            return row.Code === jcids[i].Code
+          }
+        })
+      })
+      highlightRows(failedRows, 'red');
+    } else {
+      SpreadsheetApp.getUi().alert(`All JCIDs updated successfully`)
+    }
+  } catch  (err) {
+    Logger.log(`[UpdateJCIDS]: ${err}`)
+    throw err
+  }
+}
+
+function buildUpdateQuery(update: IUpdateType, items: IJobCostID[]) {
+  const searchElements = items.map((each) => {
+    if(update === 'update-JCID-code') {
+      return `Name eq '${each.Description}'`
+    } else {
+      return `Code eq '${each.Code}'`
+    }
+  })
+  return `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${searchElements.join(" or ")})`
+}
+
+function getJCIDS(baseUrl: string, query: string, token: string) {
+  const url = baseUrl + query;
+  const headers = createHeaders(token);
+  const getOptions = {
+    headers,
+    method: 'get' as const,
+    muteHttpExceptions: true
+  }
+  const response = fetchWithRetries(url, getOptions);
+  const responseCode = response.getResponseCode();
+  if(responseCode !== 200) {
+    Logger.log(`An error occured fetching JCID resources: ${response.getContentText()}`)
+    throw new Error(`An error occured fetching JCID resources: ${response.getContentText()}`)
+  }
+  const data: IGetResponse<IJobCostID> = JSON.parse(response.getContentText());
+  const items = [...data.Items];
+  if(data.Pagination.NextPage) {
+    const qIndex = data.Pagination.NextPage.indexOf("?");
+    const query = data.Pagination.NextPage.substring(qIndex);
+    const nextPageItems = getJCIDS(baseUrl, query, token);
+    items.push(...nextPageItems)
+  }
+  return items;
+}

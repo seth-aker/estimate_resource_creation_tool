@@ -1,6 +1,7 @@
 // Work types require a EstimateREF to be sent with the post, use this as a dummy ref
 const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000";
 const DEFAULT_BATCH_SIZE = 50;
+const MAX_RETRIES = 5;
 
 type TOrganizationDTO = ISubcontractorDTO | ICustomerRow | IVendorDTO
 interface ICategoryItem {
@@ -14,21 +15,13 @@ interface ISubcategoryItem extends ICategoryItem {
 interface IPagination {
   CurrentPage: string,
   ItemsOnPage: number,
-  NextPage: string,
+  NextPage?: string,
   PageSize: number,
-  PreviousPage: string,
+  PreviousPage?: string,
   TotalItems: number
 }
-interface ICategoryGetResponse {
-  Items: ICategoryItem[],
-  Pagination: IPagination
-}
-interface ISubcategoryGetResponse {
-  Items: ISubcategoryItem[],
-  Pagination: IPagination
-}
-interface IOrganizationGetResponse {
-  Items: ISubcontractorDTO[],
+interface IGetResponse<T> {
+  Items: T[],
   Pagination: IPagination
 }
 type TSpreadsheetValues = Number | Boolean | Date | String
@@ -130,7 +123,7 @@ function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchR
       responseIndices.push(index);
     }
   })
-  if(retryCount < 5 && retries.length > 0) {
+  if(retryCount < MAX_RETRIES && retries.length > 0) {
     Logger.log(`${retries.length} entries failed due to connection timeout, retrying...`)
     SpreadsheetApp.getUi().alert(`${retries.length} entries failed due to connection timeout, retrying...`)
     const retryResponses = batchFetch(retries, retryCount + 1);
@@ -140,6 +133,21 @@ function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchR
   }
   return responses
 }
+function fetchWithRetries(url: string, options: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions, retryCount: number = 0) {
+  Utilities.sleep(retryCount * retryCount * 1000); // Exponential Backoff
+
+  let response = UrlFetchApp.fetch(url, options);
+  const responseCode = response.getResponseCode();
+  const responseMessage = response.getContentText();
+  if(responseCode === 500 
+    && responseMessage.includes("Connection Timeout Expired.")
+    && retryCount < MAX_RETRIES
+  ) {
+    response = fetchWithRetries(url, options, retryCount + 1);
+  }
+  return response;
+}
+
 function getOrganization(orgType: string, token: string, baseUrl: string, query: string = `?$filter=EstimateREF eq ${ESTIMATE_REF}`) {
   const url = baseUrl + `/Resource/Organization/${orgType}${query}`
   const headers = createHeaders(token)
@@ -148,12 +156,12 @@ function getOrganization(orgType: string, token: string, baseUrl: string, query:
     method: 'get' as const,
     muteHttpExceptions: true
   }
-  const response = UrlFetchApp.fetch(url, options)
+  const response = fetchWithRetries(url, options)
   const responseCode = response.getResponseCode()
   if(responseCode !== 200) {
     throw new Error(`An error occured fetching organization type: "${orgType}" with code: ${responseCode}. Error: ${response.getContentText()}`)
   }
-  const data: IOrganizationGetResponse = JSON.parse(response.getContentText())
+  const data: IGetResponse<TOrganizationDTO> = JSON.parse(response.getContentText())
   const items: TOrganizationDTO[] = [...data.Items]
 
   if(data.Pagination.NextPage) {
@@ -185,7 +193,7 @@ function getDBCategoryList(categoryName: string, token: string, baseUrl: string,
       if(responseCode !== 200) {
         throw new Error(`An error occured fetching category: "${categoryName}" Code: ${responseCode}. Error: ${response.getContentText()}`)
       }
-      const data: ICategoryGetResponse = JSON.parse(response.getContentText())
+      const data: IGetResponse<ICategoryItem> = JSON.parse(response.getContentText())
       const items: ICategoryItem[] = [...data.Items]
       
       // Recursively cycle through the pages if there is a NextPage entry in the pagination object
@@ -215,7 +223,7 @@ function getDBSubcategoryList(subcategoryName: string, token: string, baseUrl: s
       if(responseCode !== 200) {
         throw new Error(`An error occured fetching subcategory: "${subcategoryName}" Code: ${responseCode}`)
       }
-      const data: ISubcategoryGetResponse = JSON.parse(response.getContentText())
+      const data: IGetResponse<ISubcategoryItem> = JSON.parse(response.getContentText())
       const items: ISubcategoryItem[] = [...data.Items]
       
       // Recursively cycle through the pages if there is a NextPage entry in the pagination object
@@ -236,7 +244,9 @@ function highlightRows(rowIndices: number[], color: string) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet()
   const lastColumn = sheet.getLastColumn()
     rowIndices.forEach((row) => {
-      sheet.getRange(row, 1,1, lastColumn).setBackground(color)
+      if(row >=0) {
+        sheet.getRange(row, 1,1, lastColumn).setBackground(color)
+      }
     })
 }
 

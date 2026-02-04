@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+
+  <body>
+    <h2>Please select an option:</h2>
+    <form id="jcid-import-option">
+      <div style="display: flex;flex-direction: column;">
+        <div>
+          <input id="create" type="radio" value="Create" name="jcidOption" />
+          <label for="create">Create new JCIDs</label>
+        </div>
+        <div>
+          <input id="update-description" type="radio" value="update-JCID-desc" name="jcidOption" />
+          <label for="update-description">Update JCID descriptions</label>
+        </div>
+        <div>
+          <input id="update-code" type="radio" value="update-JCID-code" name="jcidOption" />
+          <label for="update-code">Update JCID Codes</label>
+        </div>
+      </div>
+      <button id="submit" type="submit" form="jcid-import-option">Submit</button>
+    </form>
+  </body>
+  <script>
+    const form = document.getElementById('jcid-import-option');
+    const submitButton = document.getElementById('submit');
+        window.addEventListener('load', () => {
+        form.addEventListener('submit', (event) => {
+            event.preventDefault()
+            handleSubmit(form)
+        })
+    });
+
+    function handleSubmit(formElement) {
+      submitButton.disabled = true;
+      const selection = formElement.querySelector('input[name="jcidOption"]:checked').value;
+      if(selection === "Create") {
+        google.script.run.CreateJCIDS();
+      } else {
+        google.script.run.UpdateJCIDS(selection)
+      }
+      setTimeout(google.script.host.close, 1000);
+    }
+  </script>
+</html>
