@@ -130,9 +130,10 @@ function UpdateJCIDS(update: IUpdateType) {
           } else {
             return row.Code === jcids[i].Code
           }
-        })
+        }) + 2
       })
       highlightRows(failedRows, 'red');
+      SpreadsheetApp.getUi().alert(`Some rows failed to update: [${failedRows.join(", ")}]`)
     } else {
       SpreadsheetApp.getUi().alert(`All JCIDs updated successfully`)
     }

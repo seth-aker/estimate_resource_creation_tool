@@ -53,7 +53,7 @@ export const mockPropertiesService = {
   getUserProperties: vi.fn(() => mockPropertiesObject),
   getScriptProperties: vi.fn(() => mockPropertiesObject)
 }
-export const mockAuthenticate = vi.fn(() => ({token: 'mockToken', baseUrl: 'mockBaseUrl.com'}))
+export const mockAuthenticate = vi.fn(() => ({token: 'mockToken', baseUrl: 'https://mockUrl.com'}))
 export const mockUtilities = {
   sleep: vi.fn()
 }

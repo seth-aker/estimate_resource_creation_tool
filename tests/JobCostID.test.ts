@@ -2,6 +2,11 @@ import { gasRequire } from 'tgas-local'
 import { vi, beforeEach, expect, describe, it } from 'vitest'
 import { mockSpreadsheetApp, mockUrlFetchApp, mockUi, mockLogger, mockAuthenticate, mockRange, mockSheet, mockPropertiesService, mockUtilities, mockHtmlService, mockCacheService } from './mocks';
 const mockFetchWithRetries = vi.fn();
+const mockBatchFetch = vi.fn();
+const mockBuildUpdateQuery = vi.fn();
+const mockGetSpreadSheetData = vi.fn();
+const mockGetJCIDS = vi.fn();
+const mockHighlightRows = vi.fn()
 
 const mocks = {
   SpreadsheetApp: mockSpreadsheetApp,
@@ -13,7 +18,7 @@ const mocks = {
   CacheService: mockCacheService
   // __proto__: gas.globalMockDefaults
 }
-const mockToken = "token"
+const mockToken = "mockToken"
 const mockBaseUrl = "https://mockUrl.com"
 const mockQuery = "?mockQuery"
 const glib = gasRequire('./src', mocks)
@@ -164,6 +169,97 @@ describe('JobCostID tests', () => {
     })
   })
   describe("UpdateJCIDS", () => {
+    beforeEach(() => {
+      glib.getSpreadSheetData = mockGetSpreadSheetData;
+      glib.batchFetch = mockBatchFetch;
+      glib.getJCIDS = mockGetJCIDS;
+      glib.buildUpdateQuery = mockBuildUpdateQuery;
+      glib.highlightRows = mockHighlightRows
+    })
+    it("correctly modifies the code when 'update-JCID-code' is passed to UpdateJCIDS", () => {
+      const updateData = [
+        {Description: "Desc1", Code: "NewCode1"},
+        {Description: "Desc2", Code: "NewCode2"},
+        {Description: "Desc3", Code: "NewCode3"},
+      ]
+      mockGetSpreadSheetData.mockReturnValue(updateData)
+
+      mockBuildUpdateQuery.mockReturnValue("?query")
+      mockGetJCIDS.mockReturnValue([
+        {Description: "Desc1", Code: "OldCode1"},
+        {Description: "Desc2", Code: "OldCode2"},
+        {Description: "Desc3", Code: "OldCode3"},
+      ])
+      mockBatchFetch.mockReturnValue([
+        {getContentText: () => "No content", getResponseCode: () => 200 },
+        {getContentText: () => "No content", getResponseCode: () => 200 },
+        {getContentText: () => "No content", getResponseCode: () => 200 }
+      ])
+      const expectedBatchFetchArgs = updateData.map((each) => ({
+        url: mockBaseUrl + "/Resource/JobCostID",
+        headers: glib.createHeaders(mockToken),
+        method: 'put' as const,
+        payload: JSON.stringify(each),
+        muteHttpExceptions: true
+      }))
+      glib.UpdateJCIDS('update-JCID-code');
+      expect(mockBatchFetch).toHaveBeenCalledWith(expectedBatchFetchArgs);
+      expect(mockLogger.log).toHaveBeenCalledTimes(3);
+      expect(mockUi.alert).toHaveBeenCalledWith("All JCIDs updated successfully")
+    })
+    it("correctly modifies the description when 'update-JCID-Desc' is passed to UpdateJCIDS", () => {
+      const updateData = [
+        {Description: "NewDesc1", Code: "Code1"},
+        {Description: "NewDesc2", Code: "Code2"},
+        {Description: "NewDesc3", Code: "Code3"},
+      ]
+      mockGetSpreadSheetData.mockReturnValue(updateData)
+
+      mockBuildUpdateQuery.mockReturnValue("?query")
+      mockGetJCIDS.mockReturnValue([
+        {Description: "OldDesc1", Code: "Code1"},
+        {Description: "OldDesc2", Code: "Code2"},
+        {Description: "OldDesc3", Code: "Code3"},
+      ])
+      mockBatchFetch.mockReturnValue([
+        {getContentText: () => "No content", getResponseCode: () => 200 },
+        {getContentText: () => "No content", getResponseCode: () => 200 },
+        {getContentText: () => "No content", getResponseCode: () => 200 }
+      ])
+      const expectedBatchFetchArgs = updateData.map((each) => ({
+        url: mockBaseUrl + "/Resource/JobCostID",
+        headers: glib.createHeaders(mockToken),
+        method: 'put' as const,
+        payload: JSON.stringify(each),
+        muteHttpExceptions: true
+      }))
+      glib.UpdateJCIDS('update-JCID-desc');
+      expect(mockBatchFetch).toHaveBeenCalledWith(expectedBatchFetchArgs);
+      expect(mockLogger.log).toHaveBeenCalledTimes(3);
+      expect(mockUi.alert).toHaveBeenCalledWith("All JCIDs updated successfully")
+    })
+    it('correctly logs errors when rows fail', () => {
+      const updateData = [
+        {Description: "NewDesc1", Code: "Code1"},
+        {Description: "NewDesc2", Code: "Code2"},
+        {Description: "NewDesc3", Code: "Code3"},
+      ]
+      mockGetSpreadSheetData.mockReturnValue(updateData)
+      mockBuildUpdateQuery.mockReturnValue("?query")
+      mockGetJCIDS.mockReturnValue([
+        {Description: "OldDesc1", Code: "Code1"},
+        {Description: "OldDesc2", Code: "Code2"},
+        {Description: "OldDesc3", Code: "Code3"},
+      ])
+      mockBatchFetch.mockReturnValue([
+        {getContentText: () => "Error", getResponseCode: () => 400 },
+        {getContentText: () => "Error", getResponseCode: () => 400 },
+        {getContentText: () => "Error", getResponseCode: () => 400 }
+      ])
+      glib.UpdateJCIDS('update-JCID-desc')
+      expect(mockHighlightRows).toHaveBeenCalledWith([2,3,4], 'red')
+      expect(mockUi.alert).toHaveBeenCalledWith(`Some rows failed to update: [2, 3, 4]`)
+    })
   })
 })
   
