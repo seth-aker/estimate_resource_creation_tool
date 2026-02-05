@@ -16,13 +16,13 @@
         pattern="^[a-zA-Z0-9.]+$" />
 
       <label for="password">Password</label>
-      <input id="password" name="password" type="password" required />
+      <input id="password" name="password" type="password" placeholder="Password for Windows app account user" required />
 
       <label for="clientID">ClientID</label>
       <input id="clientID" name="clientID" type="text" placeholder="API Client ID" required />
 
       <label for="clientSecret">Client Secret</label>
-      <input id="clientSecret" name="clientSecret" type="password" placeholder="API Client Secret" required />
+      <input id="clientSecret" name="clientSecret" type="password" required placeholder="API Client Secret"/>
 
       <label for="serverName">Server Name</label>
       <input id="serverName" name="serverName" type="text" placeholder="e.g. 'b2w-eus00-XXXX,48100'" required />
@@ -32,7 +32,7 @@
     </div>
     <div style="display: flex; flex-direction: row;">
       <button id="submit" type="submit" form="user-properties-form">Set Database Properties</button>
-      <p id="response"></p>
+      <div style="margin-left: 10px;" id="response"></div>
     </div>
   </form>
 </body>
@@ -77,11 +77,34 @@
   const form = document.getElementById('user-properties-form')
   const submitButton = document.getElementById('submit')
 
-  window.addEventListener('load', () => {
+  function setup() {
+    const baseUrl = "<?= baseUrl ?>";
+    const userName = "<?= userName ?>";
+    const clientID = "<?= clientID ?>";
+    const serverName = "<?= serverName ?>";
+    const dbName = "<?= dbName ?>";
+    const hasPassword = "<?= hasPassword ?>"
+    const hasClientSecret = "<?= hasClientSecret ?>";
+
+    form.querySelector('input[name="baseUrl"]').value = baseUrl;
+    form.querySelector('input[name="username"]').value = userName;
+    if(hasPassword === 'true') {
+      form.querySelector('input[name="password"]').value = "********"
+    }
+    if(hasClientSecret === "true") {
+      form.querySelector('input[name="clientSecret"]').value = "********"
+    }
+    form.querySelector('input[name="clientID"]').value = clientID;
+    form.querySelector('input[name="serverName"]').value = serverName;
+    form.querySelector('input[name="dbName"]').value = dbName;
     form.addEventListener('submit', (event) => {
-        event.preventDefault()
-        handleSubmit(form)
-      })
+      event.preventDefault()
+      handleSubmit(form)
+    })
+  }
+
+  window.addEventListener('load', () => {
+    setup();
   })
 </script>
 

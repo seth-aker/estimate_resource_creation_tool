@@ -7,6 +7,15 @@ interface IUserVariables extends Record<string, string> {
   serverName: string,
   dbName: string
 }
+interface ITemplateWithVars extends GoogleAppsScript.HTML.HtmlTemplate {
+  baseUrl: string,
+  clientID: string,
+  userName: string,
+  serverName: string,
+  dbName: string,
+  hasPassword: boolean, //indicates whether the user has a password stored
+  hasClientSecret: boolean
+}
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('API Properties')
@@ -16,8 +25,17 @@ function onOpen() {
     .addToUi()
 }
 function requestUserProperties() {
-  const html = HtmlService.createHtmlOutputFromFile('SetUserProperties')
-  SpreadsheetApp.getUi().showModalDialog(html, "Set Environment Variables")
+  const template = HtmlService.createTemplateFromFile('SetUserProperties') as ITemplateWithVars
+  const userProperties = PropertiesService.getUserProperties();
+  const props = userProperties.getProperties()
+  template.baseUrl = props['baseUrl']
+  template.clientID = props['clientID']
+  template.userName = props['userName']
+  template.serverName = props['serverName']
+  template.dbName = props['dbName']
+  template.hasPassword = userProperties.getProperty('password') ? true : false // Warning, this gets passed as a string 'true' or 'false'
+  template.hasClientSecret = userProperties.getProperty('clientSecret') ? true : false
+  SpreadsheetApp.getUi().showModalDialog(template.evaluate(), "Set Environment Variables")
 }
 function clearUserProperties() {
   PropertiesService.getUserProperties().deleteAllProperties()
