@@ -5,7 +5,10 @@ interface IJobCostID {
   ObjectID?: string
 }
 type IUpdateType = "update-JCID-code" | "update-JCID-desc";
-
+function GetJCIDOptions() {
+  const html = HtmlService.createHtmlOutputFromFile("JCIDOptionsModal");
+  SpreadsheetApp.getUi().showModalDialog(html, "Create or Update JCIDS?")
+}
 function CreateJCIDS() {
   const {token, baseUrl} = authenticate() // from Authenticate.gs
   const data = getSpreadSheetData<IJobCostID>('Job Cost IDs')

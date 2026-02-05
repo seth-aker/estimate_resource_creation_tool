@@ -87,8 +87,9 @@ function _getToken(baseUrl: string, credentials: Credentials) {
     password: credentials.password
   }
   const options = {
-    'method': 'get' as const,
-    'headers': tokenHeader
+    method: 'get' as const,
+    headers: tokenHeader,
+    muteHttpExceptions: true
   };
   try {
     const response = UrlFetchApp.fetch(`${baseUrl}/login`, options);
@@ -100,6 +101,7 @@ function _getToken(baseUrl: string, credentials: Credentials) {
     return token as string
   } catch (err) {
     Logger.log(err)
+    SpreadsheetApp.getUi().alert(err as string)
     throw err
   }
 }
