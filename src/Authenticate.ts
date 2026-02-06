@@ -46,8 +46,15 @@ function viewUserProperties() {
   SpreadsheetApp.getUi().alert(`Current API Properties: \nBase URL: ${props.baseUrl}\nClientID: ${props.clientID}\nUsername: ${props.userName}\nServer Name: ${props.serverName}\nDatabase Name: ${props.dbName}`)
 }
 function setUserVariables(vars: IUserVariables) {
+  const userProperties = PropertiesService.getUserProperties();
   try {
-    PropertiesService.getUserProperties().setProperties(vars)
+    if(vars.password === "********") {
+      vars.password = userProperties.getProperty('password') ?? ""
+    }
+    if(vars.clientSecret === "********") {
+      vars.clientSecret = userProperties.getProperty('clientSecret') ?? ""
+    }
+    userProperties.setProperties(vars)
   } catch (err) {
     SpreadsheetApp.getUi().alert(`An error occured setting properties: ${err}`)
     throw err

@@ -35,7 +35,7 @@
         submitButton.disabled = true
         const umSystem = formElement.querySelector('input[name="umSystem"]:checked').value
         google.script.run.CreateMiscellaneous(umSystem)
-        setTimeout(google.script.host.close, 1000)
+        setTimeout(google.script.host.close, 2000)
     }
 </script>
 
