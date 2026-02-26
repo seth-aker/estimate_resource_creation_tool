@@ -46,6 +46,9 @@ function viewUserProperties() {
   SpreadsheetApp.getUi().alert(`Current API Properties: \nBase URL: ${props.baseUrl}\nClientID: ${props.clientID}\nUsername: ${props.userName}\nServer Name: ${props.serverName}\nDatabase Name: ${props.dbName}`)
 }
 function setUserVariables(vars: IUserVariables) {
+  for(const key of Object.keys(vars)) {
+    vars[key].trim();
+  }
   const userProperties = PropertiesService.getUserProperties();
   try {
     if(vars.password === "********") {

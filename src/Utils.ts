@@ -243,11 +243,27 @@ function getDBSubcategoryList(subcategoryName: string, token: string, baseUrl: s
 function highlightRows(rowIndices: number[], color: string) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet()
   const lastColumn = sheet.getLastColumn()
-    rowIndices.forEach((row) => {
-      if(row >=0) {
-        sheet.getRange(row, 1,1, lastColumn).setBackground(color)
-      }
-    })
+  const rowGroups = new Map<number, number>();
+  let groupStart = rowIndices[0];
+  let groupEnd = rowIndices[rowIndices.length - 1];
+  rowGroups.set(groupStart, groupEnd);
+  for(let i = 0; i < rowIndices.length - 1; i++) {
+    if(rowIndices[i + 1] !== rowIndices[i] + 1) { // if there are entries between rows that did not fail
+      groupEnd = rowIndices[i];
+      rowGroups.set(groupStart, groupEnd);
+      groupStart = rowIndices[i + 1];
+    }
+  }
+  // set the last group
+  rowGroups.set(groupStart, rowIndices[rowIndices.length - 1])
+
+  const groupStarts = Array.from(rowGroups.keys()).sort((a,b) => a - b);
+  groupStarts.forEach(rowStart => {
+    if(rowStart >= 0) {
+      const groupSize = rowGroups.get(rowStart)! - rowStart + 1;
+      sheet.getRange(rowStart, 1, groupSize, lastColumn).setBackground(color);
+    }
+  })
 }
 
 function deepIncludes(array: any[], searchElement: any) {

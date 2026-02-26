@@ -58,13 +58,12 @@ function CreateJCIDS() {
     SpreadsheetApp.getUi().alert('All records were created successfully!');
   } else {
     // Set the background of the failed rows to red
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet()
-    existingRows.forEach((row) => {
-      sheet.getRange(row, 1,1,sheet.getLastColumn()).setBackground('yellow')
-    })
-    failedRows.forEach((row) => {
-        sheet.getRange(row, 1,1, sheet.getLastColumn()).setBackground('red')
-    })
+    if(existingRows.length !== 0) {
+      highlightRows(existingRows, 'yellow');
+    }
+    if(failedRows.length !== 0) {
+      highlightRows(failedRows, 'red')
+    }
     SpreadsheetApp.getUi().alert(`Some records failed to create or already existed in the database.
       Pre-existing rows: [${existingRows.join(', ')}]
       Failed rows: [${failedRows.join(', ')}]`);

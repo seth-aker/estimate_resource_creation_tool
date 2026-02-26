@@ -1,6 +1,6 @@
 import { gasRequire } from 'tgas-local'
 import { vi, beforeEach, expect, describe, it } from 'vitest'
-import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockSpreadsheet, mockRange, mockUtilities, mockHtmlService, mockCacheService} from './mocks';
+import { mockSpreadsheetApp, mockUrlFetchApp, mockLogger, mockSpreadsheet, mockRange, mockUtilities, mockHtmlService, mockCacheService, mockSheet} from './mocks';
 
 const mocks = {
   SpreadsheetApp: mockSpreadsheetApp,
@@ -297,5 +297,22 @@ describe("Utils Tests", () => {
       expect(mockUtilities.sleep).toHaveBeenCalledTimes(6)
       expect(mockLogger.log).toHaveBeenCalledTimes(5)
     })
+  })
+  describe('highlightRows()', () => {
+    it('should highlight consecutive rows in one group', () => {
+      const rows = [1,2,3,4,5,6,7,8,9,10];
+      mockSheet.getLastColumn.mockReturnValue(2);
+      glib.highlightRows(rows, 'red');
+      expect(mockSheet.getRange).toHaveBeenCalledExactlyOnceWith(1,1,10,2)
+    })
+    it('should separate groups of rows when they are not all consecutive', () => {
+      const rows = [1,2,3,5,10,11,12,13,14,15]
+      mockSheet.getLastColumn.mockReturnValue(2)
+      glib.highlightRows(rows, 'red');
+      expect(mockSheet.getRange).toHaveBeenNthCalledWith(1, 1,1,3,2)
+      expect(mockSheet.getRange).toHaveBeenNthCalledWith(2, 5,1,1,2)
+      expect(mockSheet.getRange).toHaveBeenNthCalledWith(3, 10,1,6,2)
+    })
+    
   })
 })
