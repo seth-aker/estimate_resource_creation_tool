@@ -57,7 +57,7 @@ function setUserVariables(vars: IUserVariables) {
     if(vars.clientSecret === "********") {
       vars.clientSecret = userProperties.getProperty('clientSecret') ?? ""
     }
-    if(!vars.baseUrl.includes("ESTAPI_")) {
+    if(!vars.baseUrl.toLowerCase().includes("estapi_")) {
       const splitUrl = vars.baseUrl.split("/")
       let companyName = splitUrl[splitUrl.length - 1];
       splitUrl[splitUrl.length - 1] = `ESTAPI_${companyName}`;
