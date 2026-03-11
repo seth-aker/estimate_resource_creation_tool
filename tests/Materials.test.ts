@@ -20,7 +20,7 @@ const mockHeader = {
   'Content-Type': 'application/json',
   'ClientID': mockUserProperties.clientID,
   'ClientSecret': mockUserProperties.clientSecret,
-  "ConnectionString": `Server=${mockUserProperties.serverName};Database=${mockUserProperties.dbName};MultipleActiveResultSets=true;Integrated Security=SSPI;`
+  "ConnectionString": `Server=${mockUserProperties.sqlListener};Database=${mockUserProperties.dbName};MultipleActiveResultSets=true;Integrated Security=SSPI;`
 }
 describe('Materials', () => {
   beforeEach(() => {

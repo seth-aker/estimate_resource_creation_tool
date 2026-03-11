@@ -59,14 +59,14 @@ function getSpreadSheetData<T>(spreadsheetName: string): T[] {
 function createHeaders(token: string, additionalHeaders?: Record<string, string>) {
     const baseUrl = PropertiesService.getUserProperties().getProperty('baseUrl')
     const userName = PropertiesService.getUserProperties().getProperty('userName')
-    const serverName = PropertiesService.getUserProperties().getProperty('serverName')
+    const sqlListener = PropertiesService.getUserProperties().getProperty('sqlListener')
     const clientID = PropertiesService.getUserProperties().getProperty('clientID')
     const clientSecret = PropertiesService.getUserProperties().getProperty('clientSecret')
     const dbName = PropertiesService.getUserProperties().getProperty('dbName')
-    if(!baseUrl || !userName || !serverName || !dbName || !clientID || !clientSecret) {
+    if(!baseUrl || !userName || !sqlListener || !dbName || !clientID || !clientSecret) {
       throw new Error('Missing required user properties')
     }
-    const connectionString = `Server=${serverName};Database=${dbName};MultipleActiveResultSets=true;Integrated Security=SSPI;`
+    const connectionString = `Server=${sqlListener};Database=${dbName};MultipleActiveResultSets=true;Integrated Security=SSPI;`
     
     return {
         'Authorization': `Bearer ${token}`,

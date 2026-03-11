@@ -36,7 +36,7 @@ export const mockUserProperties = {
   clientSecret: 'mockClientSecret',
   userName: 'mockUserName',
   password: 'mockPassword',
-  serverName: 'mockServerName',
+  sqlListener: 'mockServerName',
   dbName: 'mockDbName'
 }
 export const mockPropertiesObject = {
