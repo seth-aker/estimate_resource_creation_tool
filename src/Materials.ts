@@ -113,8 +113,8 @@ function createMaterialDTO(materialRow: IMaterialRow, systemOfMeasure: TSystemOf
         JobCostIDCode: materialRow.JobCostIDCode,
         Notes: materialRow.Notes,
         ShouldRoundQuantity: materialRow.ShouldRoundQuantity,
-        QuantityRoundingIncrement: materialRow.QuantityRoundingIncrement,
-        QuantityRoundingIncrementSystemOfMeasure: systemOfMeasure
+        QuantityRoundingIncrement: materialRow.ShouldRoundQuantity ? materialRow.QuantityRoundingIncrement : undefined,
+        QuantityRoundingIncrementSystemOfMeasure: materialRow.ShouldRoundQuantity ? systemOfMeasure : undefined
     } 
     // Some values were being sent over to the api as blank strings and estimate was throwing a fit. This removes those keys.
     Object.keys(dto).forEach((key) => {

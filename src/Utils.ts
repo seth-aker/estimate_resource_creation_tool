@@ -188,7 +188,7 @@ function getDBCategoryList(categoryName: string, token: string, baseUrl: string,
       muteHttpExceptions: true
     }
     try {
-      const response = UrlFetchApp.fetch(url, options)
+      const response = fetchWithRetries(url, options)
       const responseCode = response.getResponseCode()
       if(responseCode !== 200) {
         throw new Error(`An error occured fetching category: "${categoryName}" Code: ${responseCode}. Error: ${response.getContentText()}`)
@@ -218,7 +218,7 @@ function getDBSubcategoryList(subcategoryName: string, token: string, baseUrl: s
       muteHttpExceptions: true
     }
     try {
-      const response = UrlFetchApp.fetch(url, options)
+      const response = fetchWithRetries(url, options)
       const responseCode = response.getResponseCode()
       if(responseCode !== 200) {
         throw new Error(`An error occured fetching subcategory: "${subcategoryName}" Code: ${responseCode}`)

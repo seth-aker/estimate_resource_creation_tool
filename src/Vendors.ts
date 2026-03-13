@@ -169,10 +169,11 @@ function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
     const vendorsToGet: {Name: string, City: string}[] = []
     const createdVendors: IVendorDTO[] = []
     const batchOptions = vendors.map((vendor) => {
-        const {['Vendor Category']: vendorCategory, ["Material Categories"]: vendorMaterials, ...restOfVendor} = vendor
+        const {['Vendor Category']: vendorCategory, ["Material Categories"]: vendorMaterials, Zip, ...restOfVendor} = vendor
         const payload = {
             ...restOfVendor,
-            Category: vendorCategory
+            Category: vendorCategory,
+            Zip: Zip?.toString() // This cannot be a number
         }
         const options = {
             url,
@@ -199,8 +200,9 @@ function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
             }
         })
         if(vendorsToGet.length > 0) {
-            const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${vendorsToGet.map((each) => `(Name eq '${each.Name}' and City eq '${each.City}')`).join(' or ')})`
-            const existingVendors = getOrganization('Vendor', token, baseUrl, query)
+            // too many vendors makes this not work. TODO: Edit this to batchify these requests.
+            // const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${vendorsToGet.map((each) => `(Name eq '${each.Name}' and City eq '${each.City}')`).join(' or ')})` 
+            const existingVendors = getOrganization('Vendor', token, baseUrl)
             createdVendors.push(...existingVendors)
         }
         return {failedRows, createdVendors}
