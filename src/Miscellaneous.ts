@@ -15,7 +15,7 @@ interface IMiscDTO {
   ImperialUnitOfMeasure: string,
   MetricUnitOfMeasure: string,
   MiscellaneousCategory?: string,
-  UnitCost?: number,
+  UnitCost?: string,
   UnitCostSystemOfMeasure?: string
 }
 function AskForMiscSystemOfMeasure() {
@@ -86,7 +86,7 @@ function _createMiscellaneous(miscellaneous: IMiscDTO[], token: string, baseUrl:
   }
 }
 function createMiscDTOFromRow(row: IMiscRow, systemOfMeasure: TSystemOfMeasure) {
-  const {UM, ...rest} = row
+  const {UM, UnitCost, ...rest} = row
   let impUM: string 
   let metricUM: string
   if(systemOfMeasure === 'Imperial') {
@@ -103,6 +103,7 @@ function createMiscDTOFromRow(row: IMiscRow, systemOfMeasure: TSystemOfMeasure) 
     ImperialUnitOfMeasure: impUM,
     MetricUnitOfMeasure: metricUM,
     UnitCostSystemOfMeasure: systemOfMeasure,
+    UnitCost: UnitCost?.toString(), 
     ...rest
   } as IMiscDTO
 }

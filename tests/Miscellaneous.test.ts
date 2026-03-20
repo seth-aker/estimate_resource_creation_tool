@@ -36,7 +36,7 @@ describe('Miscellaneous', () => {
   const miscDTO1 = {
     Name: 'mock1',
     Notes: 'mockNote1',
-    UnitCost: 10,
+    UnitCost: '10',
     ImperialUnitOfMeasure: 'LF',
     MetricUnitOfMeasure: 'm',
     UnitCostSystemOfMeasure: 'Imperial'
@@ -44,7 +44,7 @@ describe('Miscellaneous', () => {
   const miscDTO2 = {
     Name: 'mock2',
     Notes: 'mockNote2',
-    UnitCost: 100,
+    UnitCost: '100',
     ImperialUnitOfMeasure: 'EACH',
     MetricUnitOfMeasure: 'EACH',
     UnitCostSystemOfMeasure: 'Imperial'

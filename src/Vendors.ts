@@ -72,7 +72,7 @@ function CreateVendors() {
         const vendorMaterialCategories = row['Material Categories'].split(',').map(each => each.trim())
         const orgRef = createdVendors.find((each) => each.Name === row.Name)?.ObjectID
         if(!orgRef) {
-            throw new Error("An unexpected error occured matching vendor rows to created vendors. This shouldn't have happened and is 100% a bug. Please report this to seth_aker@trimble.com")
+            throw new Error("An unexpected error occured matching vendor rows to created vendors. Please report this to seth_aker@trimble.com")
         }
 
         vendorMaterialCategories.forEach((matCat) => {
