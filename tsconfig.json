@@ -18,7 +18,7 @@
     "noImplicitReturns": true, 
     "noFallthroughCasesInSwitch": true,
     
-    "sourceMap": true,
+    "sourceMap": false,
     "plugins": [
       {
         "name": "typescript-plugin-tgas-local",

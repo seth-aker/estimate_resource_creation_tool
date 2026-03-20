@@ -175,7 +175,6 @@ describe('Vendors', () => {
         { getResponseCode: () => 200, getContentText: () => '' },
         { getResponseCode: () => 201, getContentText: () => (JSON.stringify({Item: {Name: 'mockVendor3', City: 'mockCity', Category: 'VendorCategory2'}}))}
       ])
-      const expectedQuery = `?$filter=EstimateREF eq 00000000-0000-0000-0000-000000000000 and ((Name eq 'mockVendor1' and City eq 'mockCity') or (Name eq 'mockVendor2' and City eq 'mockCity'))`
       
       const {failedRows, createdVendors} = gLib._createVendors(mockVendorRows, mockToken, mockBaseUrl)
       
@@ -186,7 +185,7 @@ describe('Vendors', () => {
       expect(mockLogger.log).nthCalledWith(1, 'Row 2: Vendor with name "mockVendor1" already exists')
       expect(mockLogger.log).nthCalledWith(2, 'Row 3: Vendor with name "mockVendor2" already exists')
       expect(mockLogger.log).nthCalledWith(3, 'Row 4: Vendor with name "mockVendor3" successfully created')
-      expect(gLib.getOrganization).toHaveBeenCalledWith('Vendor', mockToken, mockBaseUrl, expectedQuery)
+      expect(gLib.getOrganization).toHaveBeenCalledWith('Vendor', mockToken, mockBaseUrl)
     })
   })
   describe('_createVendorCategories', () => {

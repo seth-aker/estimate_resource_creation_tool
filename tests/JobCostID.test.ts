@@ -87,7 +87,7 @@ describe('JobCostID tests', () => {
       ]
       const query = glib.buildUpdateQuery(updateType, mockItems);
 
-      expect(query).toEqual(`?$filter=EstimateREF eq ${glib.ESTIMATE_REF} and (Name eq 'Desc1' or Name eq 'Desc2')`)
+      expect(query).toEqual(`/Resource/JobCostID?$filter=EstimateREF eq ${glib.ESTIMATE_REF} and (Description eq 'Desc1' or Description eq 'Desc2')`)
     })
     it("should return filter by Code when update-JCID-desc is the update type", () => {
       const updateType = "update-JCID-desc";
@@ -97,7 +97,7 @@ describe('JobCostID tests', () => {
       ]
       const query = glib.buildUpdateQuery(updateType, mockItems);
 
-      expect(query).toEqual(`?$filter=EstimateREF eq ${glib.ESTIMATE_REF} and (Code eq 'Code1' or Code eq 'Code2')`)
+      expect(query).toEqual(`/Resource/JobCostID?$filter=EstimateREF eq ${glib.ESTIMATE_REF} and (Code eq 'Code1' or Code eq 'Code2')`)
     })
   })
   describe("getJCIDS", () => {
@@ -108,7 +108,7 @@ describe('JobCostID tests', () => {
       })
 
       expect(() => glib.getJCIDS(mockBaseUrl, mockQuery, mockToken)).toThrow();
-      expect(mockLogger.log).toHaveBeenCalledWith("An error occured fetching JCID resources: mockError")
+      expect(mockLogger.log).toHaveBeenCalledWith("Error: 400. An error occured fetching JCID resources: mockError")
     })
     it('should return correct amount of items when there is no pagination', () => {
       const responseItems: IJobCostID[] = [

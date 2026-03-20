@@ -58,13 +58,12 @@ function CreateJCIDS() {
     SpreadsheetApp.getUi().alert('All records were created successfully!');
   } else {
     // Set the background of the failed rows to red
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet()
-    existingRows.forEach((row) => {
-      sheet.getRange(row, 1,1,sheet.getLastColumn()).setBackground('yellow')
-    })
-    failedRows.forEach((row) => {
-        sheet.getRange(row, 1,1, sheet.getLastColumn()).setBackground('red')
-    })
+    if(existingRows.length !== 0) {
+      highlightRows(existingRows, 'yellow');
+    }
+    if(failedRows.length !== 0) {
+      highlightRows(failedRows, 'red')
+    }
     SpreadsheetApp.getUi().alert(`Some records failed to create or already existed in the database.
       Pre-existing rows: [${existingRows.join(', ')}]
       Failed rows: [${failedRows.join(', ')}]`);
@@ -149,12 +148,12 @@ function UpdateJCIDS(update: IUpdateType) {
 function buildUpdateQuery(update: IUpdateType, items: IJobCostID[]) {
   const searchElements = items.map((each) => {
     if(update === 'update-JCID-code') {
-      return `Name eq '${each.Description}'`
+      return `Description eq '${each.Description}'`
     } else {
       return `Code eq '${each.Code}'`
     }
   })
-  return `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${searchElements.join(" or ")})`
+  return `/Resource/JobCostID?$filter=EstimateREF eq ${ESTIMATE_REF} and (${searchElements.join(" or ")})`
 }
 
 function getJCIDS(baseUrl: string, query: string, token: string) {
@@ -168,8 +167,8 @@ function getJCIDS(baseUrl: string, query: string, token: string) {
   const response = fetchWithRetries(url, getOptions);
   const responseCode = response.getResponseCode();
   if(responseCode !== 200) {
-    Logger.log(`An error occured fetching JCID resources: ${response.getContentText()}`)
-    throw new Error(`An error occured fetching JCID resources: ${response.getContentText()}`)
+    Logger.log(`Error: ${responseCode}. An error occured fetching JCID resources: ${response.getContentText()}`)
+    throw new Error(`Error: ${responseCode}. An error occured fetching JCID resources: ${response.getContentText()}`)
   }
   const data: IGetResponse<IJobCostID> = JSON.parse(response.getContentText());
   const items = [...data.Items];

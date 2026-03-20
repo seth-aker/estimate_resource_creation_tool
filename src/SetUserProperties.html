@@ -24,8 +24,8 @@
       <label for="clientSecret">Client Secret</label>
       <input id="clientSecret" name="clientSecret" type="password" required placeholder="API Client Secret"/>
 
-      <label for="serverName">Server Name</label>
-      <input id="serverName" name="serverName" type="text" placeholder="e.g. 'b2w-eus00-XXXX,48100'" required />
+      <label for="sqlListener">SQL Listener</label>
+      <input id="sqlListener" name="sqlListener" type="text" placeholder="e.g. 'b2w-eus00-XXXX,48100'" required />
 
       <label for="dbName">Database Name</label>
       <input id="dbName" name="dbName" type="text" placeholder="DatabaseNameGoesHere" />
@@ -44,7 +44,7 @@
     const password = formElement.querySelector('input[name="password"]').value
     const clientID = formElement.querySelector('input[name="clientID"]').value
     const clientSecret = formElement.querySelector('input[name="clientSecret"]').value
-    const serverName = formElement.querySelector('input[name="serverName"]').value
+    const sqlListener = formElement.querySelector('input[name="sqlListener"]').value
     const dbName = formElement.querySelector('input[name="dbName"]').value
     google.script.run
       .withSuccessHandler(handleSuccess)
@@ -55,7 +55,7 @@
         password,
         clientID,
         clientSecret,
-        serverName,
+        sqlListener,
         dbName
       })
   }
@@ -81,7 +81,7 @@
     const baseUrl = "<?= baseUrl ?>";
     const userName = "<?= userName ?>";
     const clientID = "<?= clientID ?>";
-    const serverName = "<?= serverName ?>";
+    const sqlListener = "<?= sqlListener ?>";
     const dbName = "<?= dbName ?>";
     const hasPassword = "<?= hasPassword ?>"
     const hasClientSecret = "<?= hasClientSecret ?>";
@@ -95,7 +95,7 @@
       form.querySelector('input[name="clientSecret"]').value = "********"
     }
     form.querySelector('input[name="clientID"]').value = clientID;
-    form.querySelector('input[name="serverName"]').value = serverName;
+    form.querySelector('input[name="sqlListener"]').value = sqlListener;
     form.querySelector('input[name="dbName"]').value = dbName;
     form.addEventListener('submit', (event) => {
       event.preventDefault()

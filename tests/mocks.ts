@@ -11,6 +11,7 @@ export const mockRange = {
 export const mockSheet = {
   getRange: vi.fn(() => mockRange),
   getLastColumn: vi.fn(),
+  getLastRow: vi.fn(),
   getDataRange: vi.fn(() => mockRange)
 }
 export const mockSpreadsheet = {
@@ -35,7 +36,7 @@ export const mockUserProperties = {
   clientSecret: 'mockClientSecret',
   userName: 'mockUserName',
   password: 'mockPassword',
-  serverName: 'mockServerName',
+  sqlListener: 'mockServerName',
   dbName: 'mockDbName'
 }
 export const mockPropertiesObject = {

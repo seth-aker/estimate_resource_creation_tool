@@ -24,7 +24,7 @@ describe("MaterialCategory", () => {
     const mockHeader = {
         'Authorization': `Bearer ${mockToken}`,
         'Content-Type': 'application/json',
-        "ConnectionString": `Server=${mockUserProperties.serverName};Database=${mockUserProperties.dbName};MultipleActiveResultSets=true;Integrated Security=SSPI;`,
+        "ConnectionString": `Server=${mockUserProperties.sqlListener};Database=${mockUserProperties.dbName};MultipleActiveResultSets=true;Integrated Security=SSPI;`,
         'ClientID': mockUserProperties.clientID,
         'ClientSecret': mockUserProperties.clientSecret
     }

@@ -156,9 +156,8 @@ function _createSubcontractors(subcontractorData: ISubcontractorRow[], token: st
             }
         })
         if(subcontractorsToGet.length > 0) {
-            const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${subcontractorsToGet.map(each => `Name eq '${each}'`).join(" or ")})`
-            const existingSubcontractors = getOrganization('Subcontractor', token, baseUrl, query) as ISubcontractorDTO[]
-            createdSubcontractors.push(...existingSubcontractors)
+            const existingSubcontractors = getOrganization('Subcontractor', token, baseUrl) as ISubcontractorDTO[]
+            createdSubcontractors.push(...existingSubcontractors) // This may lead to duplication but that will be ok as the search to find the ObjectID will just locate the sub name and use that.
         }
         return {failedRows, createdSubcontractors}   
     } catch (err) {
