@@ -1,4 +1,5 @@
-interface ICustomerRow extends Record<string, TSpreadsheetValues | undefined> {
+interface ICustomerRow extends ISpreadsheetContact
+  {
     Name: string, 
     Address1?: string,
     Address2?: string,
@@ -13,6 +14,18 @@ interface ICustomerRow extends Record<string, TSpreadsheetValues | undefined> {
     Notes?: string,
     JobCostIDCode?: string,
     AccountingNumber?: string
+}
+
+interface ICustomerDTO extends Omit<ICustomerRow, 
+  "Contact Name" |
+  "Contact Title" |
+  "Contact Email" |
+  "Contact Phone" |
+  "Contact Notes" |
+  "Is Default Contact?"   
+  > {
+  ObjectID?: string,
+  Category?: string
 }
 function CreateCustomers() {
 
@@ -35,7 +48,14 @@ function CreateCustomers() {
   if(failedCategories.length > 0) {
     throw new Error(`Script failed while creating the following customer categories: ${failedCategories.join(', ')}`)
   }
-  const failedRows = _createCustomers(customerData, token, baseUrl)
+  const {failedRows, createdCustomers} = _createCustomers(customerData, token, baseUrl)
+
+  const contactDTOs = createContactDTOs(createdCustomers, customerData)
+  const failedContacts = createContacts(contactDTOs, token, baseUrl)
+
+  if(failedContacts.length > 0) {
+    throw new Error(`Some customer contacts failed to be created: ${failedContacts.map(idx => contactDTOs[idx].Name).join(', ')}`)
+  }
   if(failedRows.length > 0) {
     highlightRows(failedRows, 'red')
     SpreadsheetApp.getUi().alert(`Some rows failed to be created. Failed Rows: ${failedRows.join(', ')}`)
@@ -47,6 +67,7 @@ function _createCustomers(customerData: ICustomerRow[], token: string, baseUrl: 
   const headers = createHeaders(token)
   const url = baseUrl + '/Resource/Organization/Customer'
   const failedRows: number[] = [];
+  const createdCustomers: ICustomerDTO[] = [];
   const batchOptions = customerData.map((row) => {
     // Ensure all values are strings before sending to the server.
     Object.keys(row).forEach((key) => {
@@ -54,11 +75,22 @@ function _createCustomers(customerData: ICustomerRow[], token: string, baseUrl: 
         row[key] = String(row[key])
       }
     })
+    const {
+      ['Contact Name']: contactName,
+      ['Contact Title']: contactTitle,
+      ['Contact Email']: contactEmail,
+      ['Contact Phone']: contactPhone,
+      ['Contact Notes']: contactNotes,
+      ['Contact Fax']: contactFax,
+      ['Contact Extension']: extension,
+      ['Is Default Contact?']: isDefault,
+      ...rest
+    } = row
     return {
       url,
       headers,
       method: 'post' as const,
-      payload: JSON.stringify(row),
+      payload: JSON.stringify(rest),
       muteHttpExceptions: true
     }
   })
@@ -72,6 +104,7 @@ function _createCustomers(customerData: ICustomerRow[], token: string, baseUrl: 
       } else if(responseCode === 409 || responseCode === 200) {
         Logger.log(`Row ${index +2}: Customer "${customerData[index].Name}" already existed in the database.`)
       } else {
+        createdCustomers.push(JSON.parse(response.getContentText()).Item);
         Logger.log(`Customer: "${customerData[index].Name}" successfully created`)
       }
     })
@@ -79,7 +112,7 @@ function _createCustomers(customerData: ICustomerRow[], token: string, baseUrl: 
     Logger.log(err)
     throw new Error("An unexpected error occured creating customer categories. See logs for more details.")
   }
-  return failedRows
+  return {failedRows, createdCustomers}
 }
 function _createCustomerCategories(categories: string[], token: string, baseUrl: string) {
   const failedCategories: string[] = []

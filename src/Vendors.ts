@@ -1,4 +1,4 @@
-interface IVendorRow {
+interface IVendorRow  extends ISpreadsheetContact{
     Name: string, 
     Address1?: string,
     Address2?: string,
@@ -15,7 +15,16 @@ interface IVendorRow {
     Notes?: string,
     IsOwned?: boolean
 }
-interface IVendorDTO extends Omit<IVendorRow, "Vendor Category" | "Material Categories"> {
+interface IVendorDTO extends Omit<IVendorRow, 
+    "Vendor Category" | 
+    "Material Categories" |
+    "Contact Name" |
+    "Contact Title" |
+    "Contact Email" |
+    "Contact Phone" |
+    "Contact Notes" |
+    "Is Default Contact?"   
+    > {
     ObjectID?: string,
     Category?: string
 }
@@ -106,6 +115,12 @@ function CreateVendors() {
                 return `Vendor: "${createdVendors.find(vend => vend.ObjectID === each.OrganizationREF)?.Name}", MaterialSubcategory: "${allMaterialSubcategories.find(matCat => each.MaterialSubcategoryREF === matCat.ObjectID)?.Name}"`
             }).join('\n')}`)
     }
+
+    const contactsDTOs = createContactDTOs(createdVendors, vendorData);
+    const failedContacts = createContacts(contactsDTOs, token, baseUrl)
+    if(failedContacts.length > 0) {
+        throw new Error(`Some contacts failed to be created: ${failedContacts.map(idx => contactsDTOs[idx].Name).join(', ')}`)
+    }
     SpreadsheetApp.getUi().alert("All rows were created successfully.")
 }
 function _createVendorCategories(vendorCategories: string[], token: string, baseUrl: string) {
@@ -169,8 +184,21 @@ function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
     const vendorsToGet: {Name: string, City: string}[] = []
     const createdVendors: IVendorDTO[] = []
     const batchOptions = vendors.map((vendor) => {
-        const {['Vendor Category']: vendorCategory, ["Material Categories"]: vendorMaterials, Zip, ...restOfVendor} = vendor
-        const payload = {
+        const {
+            ['Vendor Category']: vendorCategory,
+            ["Material Categories"]: vendorMaterials, 
+            Zip, 
+            ['Contact Name']: contactName,
+            ['Contact Title']: contactTitle,
+            ['Contact Email']: contactEmail,
+            ['Contact Phone']: contactPhone,
+            ['Contact Notes']: contactNotes,
+            ['Contact Fax']: contactFax,
+            ['Contact Extension']: extension,
+            ['Is Default Contact?']: isDefault,
+            ...restOfVendor
+        } = vendor
+        const payload: IVendorDTO = {
             ...restOfVendor,
             Category: vendorCategory,
             Zip: Zip?.toString() // This cannot be a number

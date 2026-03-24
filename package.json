@@ -2,7 +2,7 @@
 	"scripts": {
 		"test": "vitest run",
 		"clean": "rimraf --glob dist/*",
-		"build": "pnpm run clean && tsc -b ./tsconfig.build.json && cp appsscript.json dist\\ && cp src\\*.html dist\\",
+		"build": "pnpm run clean && tsc -b ./tsconfig.build.json && copy appsscript.json dist\\ && copy src\\*.html dist\\",
 		"push": "pnpm run test && pnpm run build && pnpm clasp push"
 	},
 	"devDependencies": {

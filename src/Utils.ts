@@ -24,7 +24,7 @@ interface IGetResponse<T> {
   Items: T[],
   Pagination: IPagination
 }
-type TSpreadsheetValues = Number | Boolean | Date | String
+type TSpreadsheetValues = Number | Boolean | Date | string
 
 interface IBatchProgress {
   batchNumber: number,
@@ -221,6 +221,10 @@ function getDBSubcategoryList(subcategoryName: string, token: string, baseUrl: s
       const response = fetchWithRetries(url, options)
       const responseCode = response.getResponseCode()
       if(responseCode !== 200) {
+        if(responseCode === 404) {
+          Logger.log("404: Material Subcategory not found!");
+          return [] as ISubcategoryItem[];
+        }
         throw new Error(`An error occured fetching subcategory: "${subcategoryName}" Code: ${responseCode}`)
       }
       const data: IGetResponse<ISubcategoryItem> = JSON.parse(response.getContentText())

@@ -1,4 +1,4 @@
-interface ISubcontractorRow {
+interface ISubcontractorRow extends ISpreadsheetContact {
     Name: string, 
     Address1?: string,
     Address2?: string,
@@ -12,9 +12,18 @@ interface ISubcontractorRow {
     JobCostIDCode?: string,
     "Subcontractor Category"?: string,
     "Work Types": string,
-    Notes?: string
+    Notes?: string,
 }
-interface ISubcontractorDTO extends Omit<ISubcontractorRow, "Subcontractor Category" | "Work Types"> {
+interface ISubcontractorDTO extends Omit<ISubcontractorRow, 
+    "Subcontractor Category" | 
+    "Work Types" |
+    "Contact Name" |
+    "Contact Title" |
+    "Contact Email" |
+    "Contact Phone" |
+    "Contact Notes" |
+    "Is Default Contact?"   
+    > {
     ObjectID?: string
     Category?: string
 }
@@ -114,6 +123,12 @@ function CreateSubcontractors() {
                 return `Subcontractor: "${createdSubcontractors.find(sub => sub.ObjectID === each.OrganizationREF)?.Name}", Work Subtype: "${allWorkSubtypes.find(st => st.ObjectID === each.WorkSubtypeCategoryREF)?.Name}`
             }).join('\n')}`)
     }
+
+    const subcontractorContacts = createContactDTOs(createdSubcontractors, subcontractorData);
+    const failedContacts = createContacts(subcontractorContacts, token, baseUrl)
+    if(failedContacts.length > 0) {
+        throw new Error(`Some contacts failed to be created: ${failedContacts.map(idx => subcontractorContacts[idx].Name).join(', ')}`)
+    }
     SpreadsheetApp.getUi().alert('All subcontractors created successfully!')
 }
 
@@ -124,7 +139,18 @@ function _createSubcontractors(subcontractorData: ISubcontractorRow[], token: st
     const subcontractorsToGet: string[] = []
     const batchOptions = subcontractorData.map((row) => {
         // Pull out the columns that shouldn't be sent when creating a subcontractor. These will be sent later
-        const {['Subcontractor Category']: subcontractorCategory, ['Work Types']: workTypes, ...restOfRow} = row
+        const {
+            ['Subcontractor Category']: subcontractorCategory, 
+            ['Work Types']: workTypes, 
+            ['Contact Name']: contactName,
+            ['Contact Title']: contactTitle,
+            ['Contact Email']: contactEmail,
+            ['Contact Phone']: contactPhone,
+            ['Contact Notes']: contactNotes,
+            ['Contact Fax']: contactFax,
+            ['Contact Extension']: extension,
+            ['Is Default Contact']: isDefault,
+            ...restOfRow} = row
         const url = baseUrl + '/Resource/Organization/Subcontractor'
         
         const payload = {
