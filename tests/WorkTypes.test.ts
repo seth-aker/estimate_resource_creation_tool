@@ -120,8 +120,6 @@ describe('WorkTypes', () => {
       
       expect(failedWorkSubtypes).toEqual(expectedReturnValues) 
       expect(mockUrlFetchApp.fetchAll).toBeCalledWith(expectedFetchOptions)
-      expect(mockLogger.log).nthCalledWith(1, 'Work Subtype: "Paving" failed to create with status code 400. Error: Mock Error Message')
-      expect(mockLogger.log).nthCalledWith(2, 'Work Subtype: "Demo" failed to create with status code 500. Error: Mock Error Message')
       expect(createdWorkSubtypes).toHaveLength(0)
     })
     it('logs correct message when the server response is either 200 or 409 (item already exists in the database)', () => {

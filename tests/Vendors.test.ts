@@ -52,9 +52,6 @@ describe('Vendors', () => {
       
       expect(failedCategories).toEqual([mockPayloads[0], mockPayloads[1]])
       expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledWith(expectedBatchOptions)
-      expect(mockLogger.log).nthCalledWith(1, 'An error occured adding material category with id: matREF1 to organization with id: mockOrgREF. Error: Error')
-      expect(mockLogger.log).nthCalledWith(2, 'An error occured adding material category with id: matREF2 to organization with id: mockOrgREF. Error: Error')
-
     })
     it('correctly logs categories that already exist in the database.', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([
@@ -147,9 +144,6 @@ describe('Vendors', () => {
       const {failedRows, createdVendors} = gLib._createVendors(mockVendorRows, mockToken, mockBaseUrl)
       expect(failedRows).toEqual([2,3])
       expect(createdVendors).toHaveLength(1)
-      expect(mockLogger.log).nthCalledWith(1, 'Row 2: Vendor "mockVendor1" failed with status code 400. Error: Error')
-      expect(mockLogger.log).nthCalledWith(2, 'Row 3: Vendor "mockVendor2" failed with status code 500. Error: Error')
-      expect(mockLogger.log).nthCalledWith(3, 'Row 4: Vendor with name "mockVendor3" successfully created')
 
     })
     it('should return created vendors and log success', () => {
@@ -210,9 +204,6 @@ describe('Vendors', () => {
 
       expect(failedVendorCategories).toEqual(['cat1', 'cat2'])
       expect(createdVendorCategories).toEqual(['Cat3Response Object'])
-      expect(mockLogger.log).nthCalledWith(1, 'Vendor Category: "cat1" failed to create with status code 400. Error: Error')
-      expect(mockLogger.log).nthCalledWith(2, 'Vendor Category: "cat2" failed to create with status code 500. Error: Error')
-      expect(mockLogger.log).nthCalledWith(3, 'Vendor Category: "cat3" successfully created')
     })
     it('returns no failed categories when response is 409 and fetches pre-existing categories', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([

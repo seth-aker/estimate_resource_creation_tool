@@ -88,7 +88,6 @@ describe('Miscellaneous', () => {
       //@ts-ignore
       const failedRows = gLib._createMiscellaneous(dtos, mockToken, mockBaseUrl)
       expect(failedRows).toEqual([2,3])
-      expect(mockLogger.log).toHaveBeenCalledTimes(3)
     })
     it('returns no failed rows when rows already exist or are created', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([

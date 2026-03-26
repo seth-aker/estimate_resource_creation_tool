@@ -4,25 +4,34 @@
     <base target="_top">
   </head>
   <body>
-    <div id="log"></div>
+    <div id="logTitle">Processing Batch ? of ?</div>
     <label id="progressBarLabel" for="progressBar">Percent Complete: 0%</label>
     <progress id="progressBar" value="0" max="100"></progress>
+    <div id="logHistory"></div>
   </body>
   <script>
+    let prevRetryCount = 0;
     function getProgress() {
       google.script.run.withSuccessHandler((batchProgress) => {
         console.log(`Progress Received: current batch Number: ${batchProgress.batchNumber} out of ${batchProgress.totalBatches}`)
         const progressPercent = (batchProgress.batchNumber/(batchProgress.totalBatches ?? 1)) * 100;
         const progressBar = document.getElementById("progressBar");
         const progressBarLabel = document.getElementById("progressBarLabel").innerText = `Percent Complete: ${progressPercent.toFixed(2)}%`;
-        const logText = document.getElementById("log")
-        if(batchProgress && progressPercent >= 100) {
-          progressBar.value = 100;
-          google.script.host.close()
+        const failedResCount = batchProgress.failedResCount
+        const progressTitle = document.getElementById("logTitle")
+        const logHistoryEl = document.getElementById("logHistory")
+        const isComplete = progressPercent >= 100 && failedResCount === 0;
+        if(isComplete) {
+          progressBar.value = 100
+          logHistoryEl.innerText += "\nRequests Complete!"
+          setTimeout(google.script.host.close, 2000)
           return;
         } else {
-          progressBar.value = progressPercent ?? 0;
-          logText.innerText = `Processing Batch ${batchProgress.batchNumber} of ${batchProgress.totalBatches}`
+          if(failedResCount !== 0 && batchProgress.retryCount > prevRetryCount) {
+            logHistoryEl.innerText += `\n${failedResCount} elements failed with response code 500. Retrying... (Attempt ${batchProgress.retryCount}/4)`
+            prevRetryCount = batchProgress.retryCount
+          } 
+          progressTitle.innerText = `Processing Batch ${batchProgress.batchNumber} of ${batchProgress.totalBatches}`
         }
         getProgress();
       }).getProgressFromServer()

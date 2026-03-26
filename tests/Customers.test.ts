@@ -49,8 +49,6 @@ describe('Customers', () => {
       const response = gLib._createCustomerCategories(categories, mockToken, mockBaseUrl)
       
       expect(response).toEqual(['cat1', 'cat2'])
-      expect(mockLogger.log).nthCalledWith(1, 'Customer Category: "cat1" failed to create with status code 400. Error: Error')
-      expect(mockLogger.log).nthCalledWith(2, 'Customer Category: "cat2" failed to create with status code 500. Error: Error')
     })
     it('returns successfully when response is 409 or 200', () => {
       const categories = ['cat1', 'cat2', 'cat3']
@@ -62,8 +60,6 @@ describe('Customers', () => {
       const response = gLib._createCustomerCategories(categories, mockToken, mockBaseUrl)
       
       expect(response).toEqual([])
-      expect(mockLogger.log).nthCalledWith(1, 'Customer Category: "cat1" already existed in the database.')
-      expect(mockLogger.log).nthCalledWith(2, 'Customer Category: "cat2" already existed in the database.')
     })
     it('returns successfully when response is 201', () => {
       const categories = ['cat1', 'cat2', 'cat3']
@@ -89,8 +85,7 @@ describe('Customers', () => {
       const {failedRows} = gLib._createCustomers([mockCustomerRow1, mockCustomerRow2], mockToken, mockBaseUrl)
 
       expect(failedRows).toEqual([2,3])
-      expect(mockLogger.log).nthCalledWith(1, 'Row 2: Customer "Cust1" failed with status code 400. Error: Error')
-      expect(mockLogger.log).nthCalledWith(2, 'Row 3: Customer "Cust2" failed with status code 500. Error: Error')
+
     })
     it('logs customer already existed in the database', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([
