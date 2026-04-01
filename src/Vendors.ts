@@ -150,7 +150,7 @@ function _createVendorCategories(vendorCategories: string[], token: string, base
         return options
     }) 
     try {
-        const responses = batchFetch(batchOptions)
+        const responses = batchFetch(batchOptions, 0, "Creating Vendor Categories")
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -213,7 +213,7 @@ function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
         return options
     })
     try {
-        const responses = batchFetch(batchOptions)
+        const responses = batchFetch(batchOptions, 0 , "Creating Vendors")
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -255,7 +255,7 @@ function _addVendorMaterialCategories(payloads: IVendorMaterialPayload[], isSubC
         muteHttpExceptions: true
     }))
     try {
-        const responses = batchFetch(batchOptions)
+        const responses = batchFetch(batchOptions, 0, "Connecting Vendor-Material Categories")
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {

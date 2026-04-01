@@ -135,7 +135,6 @@ function _getToken(baseUrl: string, credentials: Credentials) {
     return token as string
   } catch (err) {
     Logger.log(err)
-    SpreadsheetApp.getUi().alert(err as string)
     throw err
   }
 }
@@ -147,7 +146,22 @@ function _getToken(baseUrl: string, credentials: Credentials) {
 function authenticate(): {token: string, baseUrl: string} {
   // use to get bearer token
   const spreadsheetVars = _getUserVariables()
-  if(!spreadsheetVars) throw new Error("Missing API_Information!")
+  if(!spreadsheetVars) throw new Error("Missing API Properties!")
   const token = _getToken(spreadsheetVars.baseUrl, spreadsheetVars)
   return {token, baseUrl: spreadsheetVars.baseUrl}
+}
+
+function validateAuthentication() {
+  const {token, baseUrl} = authenticate();
+  const options = {
+    method: 'get' as const,
+    headers: createHeaders(token),
+    muteHttpExceptions: true
+  }
+  try {
+    fetchWithRetries(`${baseUrl}/Estimate/schema`, options)
+  } catch (error) {
+    Logger.log(error);
+    throw error;
+  }
 }

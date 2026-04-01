@@ -46,8 +46,9 @@
     const clientSecret = formElement.querySelector('input[name="clientSecret"]').value
     const sqlListener = formElement.querySelector('input[name="sqlListener"]').value
     const dbName = formElement.querySelector('input[name="dbName"]').value
+    document.getElementById('response').innerText = 'Setting Variables...'
     google.script.run
-      .withSuccessHandler(handleSuccess)
+      .withSuccessHandler(handleSetSuccess)
       .withFailureHandler(handleError)
       .setUserVariables({
         baseUrl,
@@ -59,8 +60,15 @@
         dbName
       })
   }
-  function handleSuccess() {
-    document.getElementById('response').innerText = 'User properties successfully updated.'
+  function handleSetSuccess() {
+    document.getElementById('response').innerText = 'Validating Authentication...'
+    google.script.run
+      .withSuccessHandler(handleValidateSuccess)
+      .withFailureHandler(handleError)
+      .validateAuthentication()
+  }
+  function handleValidateSuccess() {
+    document.getElementById('response').innerText = "API properties successfully set."
   }
   function handleError(error) {
     document.getElementById('response').innerText = `An error occured setting user properties. Error: ${error.message}`

@@ -93,16 +93,16 @@ function getProgressFromServer() {
   return batchProgress;
 }
 
-function openProgressSidebar() {
+function openProgressSidebar(sidebarTitle?: string) {
   const html = HtmlService.createHtmlOutputFromFile('ScriptProgressSidebar')
-    .setTitle("Script Progress")
+    .setTitle(sidebarTitle ?? "Script Progress")
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
-function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[], retryCount: number = 0) {
+function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[], retryCount: number = 0, processName?: string) {
   Utilities.sleep(retryCount * retryCount * 1000); // Exponential Backoff
   if(retryCount === 0) {
-    openProgressSidebar()
+    openProgressSidebar(processName)
   }
 
   const sliceCount = Math.ceil(batchOptions.length / DEFAULT_BATCH_SIZE)
@@ -143,11 +143,7 @@ function fetchWithRetries(url: string, options: GoogleAppsScript.URL_Fetch.URLFe
 
   let response = UrlFetchApp.fetch(url, options);
   const responseCode = response.getResponseCode();
-  const responseMessage = response.getContentText();
-  if(responseCode === 500 
-    && responseMessage.includes("Connection Timeout Expired.")
-    && retryCount < MAX_RETRIES
-  ) {
+  if(responseCode === 500 && retryCount < MAX_RETRIES) {
     response = fetchWithRetries(url, options, retryCount + 1);
   }
   return response;

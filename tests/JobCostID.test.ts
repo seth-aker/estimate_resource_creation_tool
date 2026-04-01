@@ -203,8 +203,7 @@ describe('JobCostID tests', () => {
         muteHttpExceptions: true
       }))
       glib.UpdateJCIDS('update-JCID-code');
-      expect(mockBatchFetch).toHaveBeenCalledWith(expectedBatchFetchArgs);
-      expect(mockLogger.log).toHaveBeenCalledTimes(3);
+      expect(mockBatchFetch).toHaveBeenCalledWith(expectedBatchFetchArgs, 0, "Updating Job Cost IDs");
       expect(mockUi.alert).toHaveBeenCalledWith("All JCIDs updated successfully")
     })
     it("correctly modifies the description when 'update-JCID-Desc' is passed to UpdateJCIDS", () => {
@@ -234,7 +233,7 @@ describe('JobCostID tests', () => {
         muteHttpExceptions: true
       }))
       glib.UpdateJCIDS('update-JCID-desc');
-      expect(mockBatchFetch).toHaveBeenCalledWith(expectedBatchFetchArgs);
+      expect(mockBatchFetch).toHaveBeenCalledWith(expectedBatchFetchArgs, 0, "Updating Job Cost IDs");
       expect(mockLogger.log).toHaveBeenCalledTimes(3);
       expect(mockUi.alert).toHaveBeenCalledWith("All JCIDs updated successfully")
     })

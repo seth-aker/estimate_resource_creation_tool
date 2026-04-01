@@ -95,7 +95,7 @@ function _createCustomers(customerData: ICustomerRow[], token: string, baseUrl: 
     }
   })
   try {
-    const responses = batchFetch(batchOptions)
+    const responses = batchFetch(batchOptions, 0, "Creating Customers")
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
       if(responseCode >= 400 && responseCode !== 409) {
@@ -137,7 +137,7 @@ function _createCustomerCategories(categories: string[], token: string, baseUrl:
     return options
   }) 
   try {
-    const responses = batchFetch(batchOptions)
+    const responses = batchFetch(batchOptions, 0, "Creating Customer Categories")
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
       if(responseCode >= 400 && responseCode !== 409) {

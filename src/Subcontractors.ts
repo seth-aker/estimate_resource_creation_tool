@@ -167,7 +167,7 @@ function _createSubcontractors(subcontractorData: ISubcontractorRow[], token: st
         return options
     })
     try {
-        const responses = batchFetch(batchOptions)
+        const responses = batchFetch(batchOptions, 0, "Creating Subcontractors")
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -213,7 +213,7 @@ function _createSubcontractorCategories(categories: string[], token: string, bas
         return options
     }) 
     try {
-        const responses = batchFetch(batchOptions)
+        const responses = batchFetch(batchOptions, 0, "Creating Subcontractor Categories")
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -254,7 +254,7 @@ function _addSubcontractorWorkTypes(workTypePayloads: ISubconWorkTypePayload[], 
         muteHttpExceptions: true
     }))
     try {
-        const responses = batchFetch(batchOptions)
+        const responses = batchFetch(batchOptions, 0, "Connecting Subcategory-Work Types")
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -284,7 +284,7 @@ function _addSubcontractorSubWorkTypes(workTypePayloads: ISubconWorkTypePayload[
     }))
     const failedSubcontractorWorkSubTypes: ISubconWorkTypePayload[] = []
     try {
-        const responses = batchFetch(batchOptions)
+        const responses = batchFetch(batchOptions, 0, "Connecting Subcontractor-Work Subtypes")
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {

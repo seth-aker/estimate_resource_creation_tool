@@ -23,7 +23,7 @@ interface IContactDTO {
   Title?: string
 }
 function createContacts(contacts: IContactDTO[], token: string, baseUrl: string) {
-  const url = `${baseUrl}/Resource/Organization/Contact?$filter=EstimateREF eq ${ESTIMATE_REF}`
+  const url = `${baseUrl}/Resource/Organization/Contact`
   const headers = createHeaders(token);
   const batchOptions = contacts.map(contact => ({
     url,
@@ -34,7 +34,7 @@ function createContacts(contacts: IContactDTO[], token: string, baseUrl: string)
   }))
   const failedContacts: number[] = [];
   try {
-    const responses = batchFetch(batchOptions) ;
+    const responses = batchFetch(batchOptions, 0, `Creating Contacts`) ;
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode();
       if(responseCode >= 400 && responseCode !== 409) {

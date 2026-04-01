@@ -73,7 +73,7 @@ function _createWorkTypes(workTypes: string[], token: string, baseUrl: string) {
     const failedWorkTypes: string[] = [];
     const createdWorkTypes: ICategoryItem[] = []
     const workTypesToGet: string[] = []
-    const responses = batchFetch(batchOptions)
+    const responses = batchFetch(batchOptions, 0, "Creating Work Types")
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
       // If the entity already exists will recieve a code of 409 so make sure to only capture real errors
@@ -128,7 +128,7 @@ function _createWorkSubtypes(workTypeSubTypeMap: IWorkTypeSubtypeMap[], token: s
   })
   try {
     const subtypesToGet: ISubcategoryItem[] = []
-    const responses = batchFetch(batchOptions);
+    const responses = batchFetch(batchOptions, 0, "Creating Work Subtypes");
     responses.forEach((response, index) => {
     const responseCode = response.getResponseCode()
       if(responseCode === 200 || responseCode === 409) {
