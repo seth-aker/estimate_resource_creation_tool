@@ -28,10 +28,10 @@
           return;
         } else {
           if(failedResCount !== 0 && batchProgress.retryCount > prevRetryCount) {
-            logHistoryEl.innerText += `\n${failedResCount} elements failed with response code 500. Retrying... (Attempt ${batchProgress.retryCount}/4)`
+            logHistoryEl.innerText += `\n${failedResCount} elements failed with response code 500. Retrying... (Attempt ${batchProgress.retryCount}/5)`
             prevRetryCount = batchProgress.retryCount
           } 
-          progressTitle.innerText = `Processing Batch ${batchProgress.batchNumber} of ${batchProgress.totalBatches}`
+          progressTitle.innerText = `Processing Batch ${batchProgress.batchNumber + 1} of ${batchProgress.totalBatches}`
         }
         getProgress();
       }).getProgressFromServer()

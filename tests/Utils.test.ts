@@ -294,8 +294,8 @@ describe("Utils Tests", () => {
       const results = glib.batchFetch(array);
       expect(results.length).toBe(array.length)
       expect(results[0].getContentText()).toBe("Connection Timeout Expired.")
-      expect(mockUtilities.sleep).toHaveBeenCalledTimes(6)
-      expect(mockLogger.log).toHaveBeenCalledTimes(5)
+      expect(mockUtilities.sleep).toHaveBeenCalledTimes(7)
+      expect(mockLogger.log).toHaveBeenCalledTimes(6)
     })
   })
   describe('highlightRows()', () => {

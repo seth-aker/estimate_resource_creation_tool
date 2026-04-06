@@ -68,7 +68,18 @@ function _createCustomers(customerData: ICustomerRow[], token: string, baseUrl: 
   const url = baseUrl + '/Resource/Organization/Customer'
   const failedRows: number[] = [];
   const createdCustomers: ICustomerDTO[] = [];
-  const batchOptions = customerData.map((row) => {
+  const seenCustsomers = new Set<string>()
+  
+  const uniqueCustomers: ICustomerRow[] = customerData.filter((row) => {
+    const key = `${row.Name}|${row.City}`
+    if(seenCustsomers.has(key)) {
+      return false
+    }
+    seenCustsomers.add(key);
+    return true
+  })
+ 
+  const batchOptions = uniqueCustomers.map((row) => {
     // Ensure all values are strings before sending to the server.
     Object.keys(row).forEach((key) => {
       if(row[key]) {

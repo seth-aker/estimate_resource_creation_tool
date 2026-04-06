@@ -137,7 +137,17 @@ function _createSubcontractors(subcontractorData: ISubcontractorRow[], token: st
     const failedRows: number[] = [];
     const createdSubcontractors: ISubcontractorDTO[] = []
     const subcontractorsToGet: string[] = []
-    const batchOptions = subcontractorData.map((row) => {
+    const seen = new Set<string>();
+    const uniqueSubcontractors = subcontractorData.filter((row) => {
+        const key = `${row.Name}|${row.City}`
+        if(seen.has(key)) {
+            return false
+        }
+        seen.add(key)
+        return true
+    })
+
+    const batchOptions = uniqueSubcontractors.map((row) => {
         // Pull out the columns that shouldn't be sent when creating a subcontractor. These will be sent later
         const {
             ['Subcontractor Category']: subcontractorCategory, 

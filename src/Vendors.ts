@@ -183,7 +183,16 @@ function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
     const failedRows: number[] = [];
     const vendorsToGet: {Name: string, City: string}[] = []
     const createdVendors: IVendorDTO[] = []
-    const batchOptions = vendors.map((vendor) => {
+    const seen = new Set<string>();
+    const uniqueVendors = vendors.filter((row) => {
+        const key = `${row.Name}|${row.City}`
+        if(seen.has(key)) {
+            return false
+        }
+        seen.add(key)
+        return true
+    })
+    const batchOptions = uniqueVendors.map((vendor) => {
         const {
             ['Vendor Category']: vendorCategory,
             ["Material Categories"]: vendorMaterials, 
