@@ -125,9 +125,11 @@ function CreateSubcontractors() {
     }
 
     const subcontractorContacts = createContactDTOs(createdSubcontractors, subcontractorData);
-    const failedContacts = createContacts(subcontractorContacts, token, baseUrl)
-    if(failedContacts.length > 0) {
-        throw new Error(`Some contacts failed to be created: ${failedContacts.map(idx => subcontractorContacts[idx].Name).join(', ')}`)
+    if(subcontractorContacts.length > 0) {
+        const failedContacts = createContacts(subcontractorContacts, token, baseUrl)
+        if(failedContacts.length > 0) {
+            throw new Error(`Some contacts failed to be created: ${failedContacts.map(idx => subcontractorContacts[idx].Name).join(', ')}`)
+        }
     }
     SpreadsheetApp.getUi().alert('All subcontractors created successfully!')
 }

@@ -117,9 +117,11 @@ function CreateVendors() {
     }
 
     const contactsDTOs = createContactDTOs(createdVendors, vendorData);
-    const failedContacts = createContacts(contactsDTOs, token, baseUrl)
-    if(failedContacts.length > 0) {
-        throw new Error(`Some contacts failed to be created: ${failedContacts.map(idx => contactsDTOs[idx].Name).join(', ')}`)
+    if(contactsDTOs.length > 0) {
+        const failedContacts = createContacts(contactsDTOs, token, baseUrl)
+        if(failedContacts.length > 0) {
+            throw new Error(`Some contacts failed to be created: ${failedContacts.map(idx => contactsDTOs[idx].Name).join(', ')}`)
+        }
     }
     SpreadsheetApp.getUi().alert("All rows were created successfully.")
 }

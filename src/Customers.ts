@@ -51,10 +51,11 @@ function CreateCustomers() {
   const {failedRows, createdCustomers} = _createCustomers(customerData, token, baseUrl)
 
   const contactDTOs = createContactDTOs(createdCustomers, customerData)
-  const failedContacts = createContacts(contactDTOs, token, baseUrl)
-
-  if(failedContacts.length > 0) {
-    throw new Error(`Some customer contacts failed to be created: ${failedContacts.map(idx => contactDTOs[idx].Name).join(', ')}`)
+  if(contactDTOs.length > 0) {
+    const failedContacts = createContacts(contactDTOs, token, baseUrl)
+    if(failedContacts.length > 0) {
+      throw new Error(`Some customer contacts failed to be created: ${failedContacts.map(idx => contactDTOs[idx].Name).join(', ')}`)
+    }
   }
   if(failedRows.length > 0) {
     highlightRows(failedRows, 'red')

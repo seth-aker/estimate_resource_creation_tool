@@ -159,7 +159,7 @@ function validateAuthentication() {
     muteHttpExceptions: true
   }
   try {
-    fetchWithRetries(`${baseUrl}/Estimate/schema`, options)
+    UrlFetchApp.fetch(`${baseUrl}/Estimate/schema`, options)
   } catch (error) {
     Logger.log(error);
     throw error;

@@ -31,7 +31,7 @@
             logHistoryEl.innerText += `\n${failedResCount} elements failed with response code 500. Retrying... (Attempt ${batchProgress.retryCount}/5)`
             prevRetryCount = batchProgress.retryCount
           } 
-          progressTitle.innerText = `Processing Batch ${batchProgress.batchNumber + 1} of ${batchProgress.totalBatches}`
+          progressTitle.innerText = `Processing Batch ${Math.min([batchProgress.batchNumber + 1, batchProgress.totalBatches])} of ${batchProgress.totalBatches}`
         }
         getProgress();
       }).getProgressFromServer()
