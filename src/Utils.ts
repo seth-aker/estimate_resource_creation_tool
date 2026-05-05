@@ -98,7 +98,7 @@ function openProgressSidebar() {
 }
 
 function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[], retryCount: number = 0) {
-  Utilities.sleep(retryCount * retryCount * 1000); // Exponential Backoff
+  Utilities.sleep(retryCount * 1000);
   
   openProgressSidebar()
 
@@ -134,7 +134,7 @@ function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchR
   return responses
 }
 function fetchWithRetries(url: string, options: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions, retryCount: number = 0) {
-  Utilities.sleep(retryCount * retryCount * 1000); // Exponential Backoff
+  Utilities.sleep(retryCount * 1000);
 
   let response = UrlFetchApp.fetch(url, options);
   const responseCode = response.getResponseCode();
