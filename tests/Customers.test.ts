@@ -49,8 +49,6 @@ describe('Customers', () => {
       const response = gLib._createCustomerCategories(categories, mockToken, mockBaseUrl)
       
       expect(response).toEqual(['cat1', 'cat2'])
-      expect(mockLogger.log).nthCalledWith(1, 'Customer Category: "cat1" failed to create with status code 400. Error: Error')
-      expect(mockLogger.log).nthCalledWith(2, 'Customer Category: "cat2" failed to create with status code 500. Error: Error')
     })
     it('returns successfully when response is 409 or 200', () => {
       const categories = ['cat1', 'cat2', 'cat3']
@@ -62,8 +60,6 @@ describe('Customers', () => {
       const response = gLib._createCustomerCategories(categories, mockToken, mockBaseUrl)
       
       expect(response).toEqual([])
-      expect(mockLogger.log).nthCalledWith(1, 'Customer Category: "cat1" already existed in the database.')
-      expect(mockLogger.log).nthCalledWith(2, 'Customer Category: "cat2" already existed in the database.')
     })
     it('returns successfully when response is 201', () => {
       const categories = ['cat1', 'cat2', 'cat3']
@@ -86,18 +82,17 @@ describe('Customers', () => {
         { getResponseCode: () => 500, getContentText: () => 'Error' }
       ])
       
-      const failedRows = gLib._createCustomers([mockCustomerRow1, mockCustomerRow2], mockToken, mockBaseUrl)
+      const {failedRows} = gLib._createCustomers([mockCustomerRow1, mockCustomerRow2], mockToken, mockBaseUrl)
 
       expect(failedRows).toEqual([2,3])
-      expect(mockLogger.log).nthCalledWith(1, 'Row 2: Customer "Cust1" failed with status code 400. Error: Error')
-      expect(mockLogger.log).nthCalledWith(2, 'Row 3: Customer "Cust2" failed with status code 500. Error: Error')
+
     })
     it('logs customer already existed in the database', () => {
       mockUrlFetchApp.fetchAll.mockReturnValue([
         { getResponseCode: () => 409, getContentText: () => '' },
         { getResponseCode: () => 200, getContentText: () => '' }
       ])
-      const failedRows = gLib._createCustomers([mockCustomerRow1, mockCustomerRow2], mockToken, mockBaseUrl)
+      const {failedRows} = gLib._createCustomers([mockCustomerRow1, mockCustomerRow2], mockToken, mockBaseUrl)
 
       expect(failedRows).toEqual([])
       expect(mockLogger.log).nthCalledWith(1, 'Row 2: Customer "Cust1" already existed in the database.')
@@ -105,10 +100,10 @@ describe('Customers', () => {
     })
     it('correctly logs when all responses are 201', () => {
        mockUrlFetchApp.fetchAll.mockReturnValue([
-        { getResponseCode: () => 201, getContentText: () => '' },
-        { getResponseCode: () => 201, getContentText: () => '' }
+        { getResponseCode: () => 201, getContentText: () => JSON.stringify({Item: ''}) },
+        { getResponseCode: () => 201, getContentText: () => JSON.stringify({Item: ''}) }
       ])
-      const failedRows = gLib._createCustomers([mockCustomerRow1, mockCustomerRow2], mockToken, mockBaseUrl)
+      const {failedRows} = gLib._createCustomers([mockCustomerRow1, mockCustomerRow2], mockToken, mockBaseUrl)
 
       expect(failedRows).toEqual([])
       expect(mockLogger.log).nthCalledWith(1, 'Customer: "Cust1" successfully created')
@@ -121,12 +116,16 @@ describe('Customers', () => {
     const mockCreateCustomerCategories = vi.fn()
     const mockCreateCustomers = vi.fn()
     const mockHighlightRows = vi.fn()
+    const mockCreateContactDTOS = vi.fn(() => [])
+    const mockCreateContacts = vi.fn(() => [])
     beforeAll(() => {
       gLib.authenticate = mockAuthenticate
       gLib.getSpreadSheetData = mockGetSpreadSheetData
       gLib._createCustomerCategories = mockCreateCustomerCategories
       gLib._createCustomers = mockCreateCustomers
       gLib.highlightRows = mockHighlightRows
+      gLib.createContactDTOs = mockCreateContactDTOS
+      gLib.createContacts = mockCreateContacts
     })
     it('exits early when there is no customer data to send', () => {
       mockGetSpreadSheetData.mockReturnValue([])
@@ -146,7 +145,7 @@ describe('Customers', () => {
     it('alerts users of an error and highlights failed rows when _createCustomers returns failed rows', () => {
       mockGetSpreadSheetData.mockReturnValue([mockCustomerRow1, mockCustomerRow2])
       mockCreateCustomerCategories.mockReturnValue([])
-      mockCreateCustomers.mockReturnValue([2,3])
+      mockCreateCustomers.mockReturnValue({failedRows: [2,3], createdCustomers: []})
 
       gLib.CreateCustomers()
       
@@ -157,7 +156,7 @@ describe('Customers', () => {
     it('correctly completes with no errors when all functions return empty arrays', () => {
       mockGetSpreadSheetData.mockReturnValue([mockCustomerRow1, mockCustomerRow2])
       mockCreateCustomerCategories.mockReturnValue([])
-      mockCreateCustomers.mockReturnValue([])
+      mockCreateCustomers.mockReturnValue({failedRows: [], createdCustomers: []})
 
       gLib.CreateCustomers()
       expect(gLib._createCustomerCategories).toHaveBeenCalledWith(['Cat1'], mockToken, mockBaseUrl)

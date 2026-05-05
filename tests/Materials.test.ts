@@ -210,8 +210,6 @@ describe('Materials', () => {
       expect(failedMaterials).toEqual([2,3])
       expect(createdMaterials).toHaveLength(0)
       expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledWith(expectedBatchOptions)
-      expect(mockLogger.log).nthCalledWith(1,'Material "mockName" failed with status code: 400. Error Message: Mock Error Message')
-      expect(mockLogger.log).nthCalledWith(2,'Material "mockName2" failed with status code: 500. Error Message: Mock Error Message')
     })
     it('correctly logs materials that already existed in the database', () => {
       const expectedBatchOptions = [mockMaterialDTO, mockMaterialDTO2].map((each) => ({

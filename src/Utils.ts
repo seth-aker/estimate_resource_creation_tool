@@ -1,7 +1,7 @@
 // Work types require a EstimateREF to be sent with the post, use this as a dummy ref
 const ESTIMATE_REF = "00000000-0000-0000-0000-000000000000";
 const DEFAULT_BATCH_SIZE = 50;
-const MAX_RETRIES = 5;
+const MAX_RETRIES = 6;
 
 type TOrganizationDTO = ISubcontractorDTO | ICustomerRow | IVendorDTO
 interface ICategoryItem {
@@ -24,7 +24,7 @@ interface IGetResponse<T> {
   Items: T[],
   Pagination: IPagination
 }
-type TSpreadsheetValues = Number | Boolean | Date | String
+type TSpreadsheetValues = Number | Boolean | Date | string
 
 interface IBatchProgress {
   batchNumber: number,
@@ -78,59 +78,64 @@ function createHeaders(token: string, additionalHeaders?: Record<string, string>
     }
 }
 
-function setProgress(batchNumber: number, totalBatches: number) {
+function setProgress(batchNumber: number, totalBatches: number, failedResCount: number, retryCount: number) {
   const batchProgress = {
     batchNumber,
-    totalBatches
+    totalBatches,
+    failedResCount,
+    retryCount
   }
   CacheService.getUserCache().put("BatchProgress", JSON.stringify(batchProgress))
 }
 
 function getProgressFromServer() {
-  const batchProgress: IBatchProgress = JSON.parse(CacheService.getUserCache().get('BatchProgress') ?? "") ?? {batchNumber: 0, totalBatches: 0};
+  const batchProgress: IBatchProgress = JSON.parse(CacheService.getUserCache().get('BatchProgress') ?? "") ?? {batchNumber: 0, totalBatches: 0, failedResCount: 0};
   return batchProgress;
 }
 
-function openProgressSidebar() {
+function openProgressSidebar(sidebarTitle?: string) {
   const html = HtmlService.createHtmlOutputFromFile('ScriptProgressSidebar')
-    .setTitle("Script Progress")
+    .setTitle(sidebarTitle ?? "Script Progress")
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
-function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[], retryCount: number = 0) {
+function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[], retryCount: number = 0, processName?: string) {
   Utilities.sleep(retryCount * 1000);
-  
-  openProgressSidebar()
+  if(retryCount === 0) {
+    openProgressSidebar(processName)
+  }
 
   const sliceCount = Math.ceil(batchOptions.length / DEFAULT_BATCH_SIZE)
   const responses: GoogleAppsScript.URL_Fetch.HTTPResponse[] = []
-  
+  const retries: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[] = [];
+  const responseIndices: number[] = []; 
+
   for(let i = 0; i < sliceCount; i++) {
-    setProgress(i+1, sliceCount);
-    responses.push(...UrlFetchApp.fetchAll(batchOptions.slice(i * DEFAULT_BATCH_SIZE, (i + 1) * DEFAULT_BATCH_SIZE))) // passing a value greater than the length of the array will include all values to the end of the array.
+    setProgress(i, sliceCount, 0, retryCount)
+    const batchResponses = UrlFetchApp.fetchAll(batchOptions.slice(i * DEFAULT_BATCH_SIZE, (i + 1) * DEFAULT_BATCH_SIZE)) // passing a value greater than the length of the array will include all values to the end of the array.
+    batchResponses.forEach((response, index) => {
+      const responseCode = response.getResponseCode()
+      if(responseCode === 500) {
+        retries.push(batchOptions[index])
+        responseIndices.push(index);
+      }
+    })
+    responses.push(...batchResponses)
     // if only one call is being made or on the last call, don't sleep
     if(sliceCount > 1 && i < sliceCount - 1) {
       Utilities.sleep(1000)
     }
+    setProgress(i+1, sliceCount, retries.length, retryCount);
   }
-  const retries: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[] = [];
-  const responseIndices: number[] = []; 
-  responses.forEach((response, index) => {
-    const responseCode = response.getResponseCode()
-    const responseMessage = response.getContentText();
-    if(responseCode === 500 && responseMessage.includes("Connection Timeout Expired.")) {
-      retries.push(batchOptions[index])
-      responseIndices.push(index);
-    }
-  })
+
   if(retryCount < MAX_RETRIES && retries.length > 0) {
     Logger.log(`${retries.length} entries failed due to connection timeout, retrying...`)
-    SpreadsheetApp.getUi().alert(`${retries.length} entries failed due to connection timeout, retrying...`)
     const retryResponses = batchFetch(retries, retryCount + 1);
     retryResponses.forEach((response, index) => {
       responses[responseIndices[index]] = response;
     })
   }
+  setProgress(sliceCount, sliceCount, 0, retryCount); // Sets the "isCompleted flag and closes the sidebar"
   return responses
 }
 function fetchWithRetries(url: string, options: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions, retryCount: number = 0) {
@@ -138,11 +143,7 @@ function fetchWithRetries(url: string, options: GoogleAppsScript.URL_Fetch.URLFe
 
   let response = UrlFetchApp.fetch(url, options);
   const responseCode = response.getResponseCode();
-  const responseMessage = response.getContentText();
-  if(responseCode === 500 
-    && responseMessage.includes("Connection Timeout Expired.")
-    && retryCount < MAX_RETRIES
-  ) {
+  if(responseCode === 500 && retryCount < MAX_RETRIES) {
     response = fetchWithRetries(url, options, retryCount + 1);
   }
   return response;
@@ -221,6 +222,10 @@ function getDBSubcategoryList(subcategoryName: string, token: string, baseUrl: s
       const response = fetchWithRetries(url, options)
       const responseCode = response.getResponseCode()
       if(responseCode !== 200) {
+        if(responseCode === 404) {
+          Logger.log("404: Material Subcategory not found!");
+          return [] as ISubcategoryItem[];
+        }
         throw new Error(`An error occured fetching subcategory: "${subcategoryName}" Code: ${responseCode}`)
       }
       const data: IGetResponse<ISubcategoryItem> = JSON.parse(response.getContentText())

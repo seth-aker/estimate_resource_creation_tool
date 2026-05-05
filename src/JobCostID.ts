@@ -35,7 +35,7 @@ function CreateJCIDS() {
   })
 
   try {
-    const responses = batchFetch(batchOptions)
+    const responses = batchFetch(batchOptions, 0, "Creating Job Cost IDs")
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
       if (responseCode === 409 || responseCode === 200) {
@@ -113,7 +113,7 @@ function UpdateJCIDS(update: IUpdateType) {
       muteHttpExceptions: true
     }));
 
-    const responses = batchFetch(batchOptions);
+    const responses = batchFetch(batchOptions, 0, "Updating Job Cost IDs");
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode();
       if(responseCode !== 200) {

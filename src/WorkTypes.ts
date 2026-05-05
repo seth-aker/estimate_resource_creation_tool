@@ -19,6 +19,13 @@ function CreateWorkTypes() {
   const uniqueWorkTypes = Array.from(new Set(parentWorkTypes))
   const {failedWorkTypes, createdWorkTypes} = _createWorkTypes(uniqueWorkTypes, token, baseUrl)
   if(failedWorkTypes.length > 0) {
+    const rowsIdxs: number[] = [] 
+    workTypesData.forEach((row, idx) => {
+      if(failedWorkTypes.includes(row["Work Type"] as string)) {
+        rowsIdxs.push(idx + 2)
+      }
+    })
+    highlightRows(rowsIdxs, 'red')
     throw new Error(`The following worktype(s) failed to be created: ${failedWorkTypes.join(", ")}`)
   } 
   const workTypeSubTypeMap: IWorkTypeSubtypeMap[] = []
@@ -38,6 +45,13 @@ function CreateWorkTypes() {
   })
   const {failedWorkSubtypes} = _createWorkSubtypes(workTypeSubTypeMap, token, baseUrl)
   if(failedWorkSubtypes.length > 0) {
+    const rowsIdxs: number[] = [] 
+    workTypesData.forEach((row, idx) => {
+      if(failedWorkSubtypes.includes(row["Work Subtype"] as string)) {
+        rowsIdxs.push(idx + 2)
+      }
+    })
+    highlightRows(rowsIdxs, 'red')
     throw new Error(`The following work Subtypes failed to be created: ${failedWorkSubtypes.join(", ")}`)
   } else {
     SpreadsheetApp.getUi().alert("All worktypes created successfully!")
@@ -73,7 +87,7 @@ function _createWorkTypes(workTypes: string[], token: string, baseUrl: string) {
     const failedWorkTypes: string[] = [];
     const createdWorkTypes: ICategoryItem[] = []
     const workTypesToGet: string[] = []
-    const responses = batchFetch(batchOptions)
+    const responses = batchFetch(batchOptions, 0, "Creating Work Types")
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
       // If the entity already exists will recieve a code of 409 so make sure to only capture real errors
@@ -91,8 +105,7 @@ function _createWorkTypes(workTypes: string[], token: string, baseUrl: string) {
       }
     })
     if(workTypesToGet.length > 0) {
-      const query = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (${workTypesToGet.map(each => `Name eq '${each}'`).join(' or ')})`
-      const existingWorkTypes = getDBCategoryList('WorkType', token, baseUrl, query)
+      const existingWorkTypes = getDBCategoryList('WorkType', token, baseUrl)
       createdWorkTypes.push(...existingWorkTypes)
     }
     return {failedWorkTypes, createdWorkTypes}
@@ -128,7 +141,7 @@ function _createWorkSubtypes(workTypeSubTypeMap: IWorkTypeSubtypeMap[], token: s
   })
   try {
     const subtypesToGet: ISubcategoryItem[] = []
-    const responses = batchFetch(batchOptions);
+    const responses = batchFetch(batchOptions, 0, "Creating Work Subtypes");
     responses.forEach((response, index) => {
     const responseCode = response.getResponseCode()
       if(responseCode === 200 || responseCode === 409) {

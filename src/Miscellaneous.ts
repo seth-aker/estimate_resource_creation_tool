@@ -67,7 +67,7 @@ function _createMiscellaneous(miscellaneous: IMiscDTO[], token: string, baseUrl:
     muteHttpExceptions: true
   }))
   try {
-    const responses = batchFetch(batchOptions)
+    const responses = batchFetch(batchOptions, 0, "Creating Miscellaneous")
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
       if(responseCode >= 400 && responseCode !== 409) {

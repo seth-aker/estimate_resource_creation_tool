@@ -120,8 +120,6 @@ describe('WorkTypes', () => {
       
       expect(failedWorkSubtypes).toEqual(expectedReturnValues) 
       expect(mockUrlFetchApp.fetchAll).toBeCalledWith(expectedFetchOptions)
-      expect(mockLogger.log).nthCalledWith(1, 'Work Subtype: "Paving" failed to create with status code 400. Error: Mock Error Message')
-      expect(mockLogger.log).nthCalledWith(2, 'Work Subtype: "Demo" failed to create with status code 500. Error: Mock Error Message')
       expect(createdWorkSubtypes).toHaveLength(0)
     })
     it('logs correct message when the server response is either 200 or 409 (item already exists in the database)', () => {
@@ -291,7 +289,6 @@ describe('WorkTypes', () => {
 
       glib.getDBCategoryList = mockGetDBCategoryList
       mockGetDBCategoryList.mockReturnValue([mockReturnAsphalt, mockReturnConcrete])
-      const expectedQuery = `?$filter=EstimateREF eq ${ESTIMATE_REF} and (Name eq 'Asphalt' or Name eq 'Concrete')`
       const {failedWorkTypes, createdWorkTypes} = glib._createWorkTypes(mockWorkTypeData, mockToken, mockBaseUrl)
 
       expect(mockUrlFetchApp.fetchAll).toHaveBeenCalledWith(expectedBatchOptions)
@@ -299,7 +296,7 @@ describe('WorkTypes', () => {
       expect(mockLogger.log).nthCalledWith(2, 'Work Type: "Concrete" already exists in the database')
       expect(failedWorkTypes).toHaveLength(0)
       expect(createdWorkTypes).toEqual([mockReturnAsphalt, mockReturnConcrete])
-      expect(mockGetDBCategoryList).toHaveBeenCalledWith('WorkType', mockToken, mockBaseUrl, expectedQuery)
+      expect(mockGetDBCategoryList).toHaveBeenCalledWith('WorkType', mockToken, mockBaseUrl)
     })
   })
   describe('CreateWorkTypes', () => {

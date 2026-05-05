@@ -1,4 +1,4 @@
-interface IVendorRow {
+interface IVendorRow  extends ISpreadsheetContact{
     Name: string, 
     Address1?: string,
     Address2?: string,
@@ -15,7 +15,16 @@ interface IVendorRow {
     Notes?: string,
     IsOwned?: boolean
 }
-interface IVendorDTO extends Omit<IVendorRow, "Vendor Category" | "Material Categories"> {
+interface IVendorDTO extends Omit<IVendorRow, 
+    "Vendor Category" | 
+    "Material Categories" |
+    "Contact Name" |
+    "Contact Title" |
+    "Contact Email" |
+    "Contact Phone" |
+    "Contact Notes" |
+    "Is Default Contact?"   
+    > {
     ObjectID?: string,
     Category?: string
 }
@@ -106,6 +115,14 @@ function CreateVendors() {
                 return `Vendor: "${createdVendors.find(vend => vend.ObjectID === each.OrganizationREF)?.Name}", MaterialSubcategory: "${allMaterialSubcategories.find(matCat => each.MaterialSubcategoryREF === matCat.ObjectID)?.Name}"`
             }).join('\n')}`)
     }
+
+    const contactsDTOs = createContactDTOs(createdVendors, vendorData);
+    if(contactsDTOs.length > 0) {
+        const failedContacts = createContacts(contactsDTOs, token, baseUrl)
+        if(failedContacts.length > 0) {
+            throw new Error(`Some contacts failed to be created: ${failedContacts.map(idx => contactsDTOs[idx].Name).join(', ')}`)
+        }
+    }
     SpreadsheetApp.getUi().alert("All rows were created successfully.")
 }
 function _createVendorCategories(vendorCategories: string[], token: string, baseUrl: string) {
@@ -135,7 +152,7 @@ function _createVendorCategories(vendorCategories: string[], token: string, base
         return options
     }) 
     try {
-        const responses = batchFetch(batchOptions)
+        const responses = batchFetch(batchOptions, 0, "Creating Vendor Categories")
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -168,9 +185,31 @@ function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
     const failedRows: number[] = [];
     const vendorsToGet: {Name: string, City: string}[] = []
     const createdVendors: IVendorDTO[] = []
-    const batchOptions = vendors.map((vendor) => {
-        const {['Vendor Category']: vendorCategory, ["Material Categories"]: vendorMaterials, Zip, ...restOfVendor} = vendor
-        const payload = {
+    const seen = new Set<string>();
+    const uniqueVendors = vendors.filter((row) => {
+        const key = `${row.Name}|${row.City}`
+        if(seen.has(key)) {
+            return false
+        }
+        seen.add(key)
+        return true
+    })
+    const batchOptions = uniqueVendors.map((vendor) => {
+        const {
+            ['Vendor Category']: vendorCategory,
+            ["Material Categories"]: vendorMaterials, 
+            Zip, 
+            ['Contact Name']: contactName,
+            ['Contact Title']: contactTitle,
+            ['Contact Email']: contactEmail,
+            ['Contact Phone']: contactPhone,
+            ['Contact Notes']: contactNotes,
+            ['Contact Fax']: contactFax,
+            ['Contact Extension']: extension,
+            ['Is Default Contact?']: isDefault,
+            ...restOfVendor
+        } = vendor
+        const payload: IVendorDTO = {
             ...restOfVendor,
             Category: vendorCategory,
             Zip: Zip?.toString() // This cannot be a number
@@ -185,7 +224,7 @@ function _createVendors(vendors: IVendorRow[], token: string, baseUrl: string) {
         return options
     })
     try {
-        const responses = batchFetch(batchOptions)
+        const responses = batchFetch(batchOptions, 0 , "Creating Vendors")
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
@@ -227,7 +266,7 @@ function _addVendorMaterialCategories(payloads: IVendorMaterialPayload[], isSubC
         muteHttpExceptions: true
     }))
     try {
-        const responses = batchFetch(batchOptions)
+        const responses = batchFetch(batchOptions, 0, "Connecting Vendor-Material Categories")
         responses.forEach((response, index) => {
             const responseCode = response.getResponseCode()
             if(responseCode >= 400 && responseCode !== 409) {
