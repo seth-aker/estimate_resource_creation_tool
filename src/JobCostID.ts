@@ -10,6 +10,10 @@ function GetJCIDOptions() {
   SpreadsheetApp.getUi().showModalDialog(html, "Create or Update JCIDS?")
 }
 function CreateJCIDS() {
+  setIsScriptFinished(false);
+  clearScriptProgress()
+  openProgressSidebar("Creating JCIDS")
+  logEvent("Starting CreateJCIDS script")
   const {token, baseUrl} = authenticate() // from Authenticate.gs
   const data = getSpreadSheetData<IJobCostID>('Job Cost IDs')
 
@@ -17,6 +21,7 @@ function CreateJCIDS() {
   if (!data || data.length === 0) {
     Logger.log("No data to send!");
     SpreadsheetApp.getUi().alert('No data to send!');
+    clearScriptProgress()
     return;
   }
   const headers = createHeaders(token)
@@ -35,42 +40,48 @@ function CreateJCIDS() {
   })
 
   try {
-    const responses = batchFetch(batchOptions, 0, "Creating Job Cost IDs")
+    logEvent("Uploading Job Cost Ids...")
+    const responses = batchFetch(batchOptions)
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode()
       if (responseCode === 409 || responseCode === 200) {
-        Logger.log(`Row ${index + 2}: Already exists in the database. Status Code: ${responseCode}. Error: ${response.getContentText()}`)
-        existingRows.push(index + 2)
+        Logger.log(`Row ${index + 2}: Already exists in the database. Status Code: ${responseCode}. ${response.getContentText()}`)
+        existingRows.push(index)
       } else if (responseCode >= 400) {
         Logger.log(`Row ${index + 2}: Failed with status code ${responseCode}. Error: ${response.getContentText()}`);
-        failedRows.push(index + 2) // Adding failed row to the list (i + 2 because of header row)
-      } else {
-        Logger.log(`Row ${index + 2}: Successfully created`);
+        failedRows.push(index) // Adding failed row to the list (i + 2 because of header row)
       }
     })
-  } catch (err) {
-    Logger.log(`An unexpected error occured: ${err}`);
-    throw err
-  }
-
-  // Show alerts based on the results
-  if (failedRows.length === 0 && existingRows.length === 0) {
-    SpreadsheetApp.getUi().alert('All records were created successfully!');
-  } else {
+    if(failedRows.length > 0) {
+      highlightRows(failedRows.map(each => each + 2), 'red');
+      const errorMessages = failedRows.map(idx => JSON.parse(responses[idx].getContentText())?.CustomMessage)
+      const failedResults = errorMessages.map((message, idx) => `Row ${failedRows[idx] + 2}: ${message}`) 
+      logEvent(`Some rows failed!\n${failedResults.join('\n')}`)
+    }
+  
     // Set the background of the failed rows to red
     if(existingRows.length !== 0) {
-      highlightRows(existingRows, 'yellow');
+      highlightRows(existingRows.map(idx => idx + 2), 'yellow');
+      const errorMessages = existingRows.map(idx => JSON.parse(responses[idx].getContentText())?.CustomMessage)
+      const results = errorMessages.map((message, idx) => `Row ${existingRows[idx] + 2}: ${message}`) 
+      logEvent(`Some rows already existed in the database!\n${results.join('\n')}`) 
     }
-    if(failedRows.length !== 0) {
-      highlightRows(failedRows, 'red')
+
+    logEvent("Script Complete!")
+    SpreadsheetApp.getUi().alert("Script Complete!")
+    setIsScriptFinished(true);
+    } catch (err) {
+      Logger.log(`An unexpected error occured: ${err}`);
+      setIsScriptFinished(true)
+      throw err
     }
-    SpreadsheetApp.getUi().alert(`Some records failed to create or already existed in the database.
-      Pre-existing rows: [${existingRows.join(', ')}]
-      Failed rows: [${failedRows.join(', ')}]`);
-  }
 }
 
 function UpdateJCIDS(update: IUpdateType) {
+  setIsScriptFinished(false);
+  clearScriptProgress()
+  openProgressSidebar("Updating JCIDS")
+  logEvent("Starting UpdateJCIDS script")
   const {token, baseUrl} = authenticate() // from Authenticate.gs
   const data = getSpreadSheetData<IJobCostID>('Job Cost IDs')
   
@@ -78,13 +89,15 @@ function UpdateJCIDS(update: IUpdateType) {
   if (!data || data.length === 0) {
     Logger.log("No data to send!");
     SpreadsheetApp.getUi().alert('No data to send!');
+    clearScriptProgress()
     return;
   }
 
-  const query = buildUpdateQuery(update, data);
+  const query = `/Resource/JobCostID?$filter=EstimateREF eq ${ESTIMATE_REF}`
   const failures: number[] = [];
   
   try {
+    logEvent("Retrieving existing JCIDS...")
     const jcids = getJCIDS(baseUrl, query, token);
     
     // Optimize search for jcid maping
@@ -96,7 +109,11 @@ function UpdateJCIDS(update: IUpdateType) {
       const val = isUpdateCode ? el.Code : el.Description;
       lookupMap.set(key, val);    
     })
-    jcids.forEach(item => {
+    jcids
+      .filter(each => {
+        data.some((row) => isUpdateCode ? row.Description === each.Description: row.Code === each.Code)
+      })
+      .forEach(item => {
       if(isUpdateCode) {
         item.Code = lookupMap.get(item.Description) ?? item.Code;
       } else {
@@ -112,8 +129,8 @@ function UpdateJCIDS(update: IUpdateType) {
       payload: JSON.stringify(jcid),
       muteHttpExceptions: true
     }));
-
-    const responses = batchFetch(batchOptions, 0, "Updating Job Cost IDs");
+    logEvent(`Updating JCID ${isUpdateCode ? "Codes": "Descriptions"}`)
+    const responses = batchFetch(batchOptions);
     responses.forEach((response, index) => {
       const responseCode = response.getResponseCode();
       if(responseCode !== 200) {
@@ -125,36 +142,22 @@ function UpdateJCIDS(update: IUpdateType) {
     })
 
     if(failures.length > 0) {
-      const failedRows = failures.map(i => {
-        return data.findIndex((row) => {
-          if(isUpdateCode) {
-            return row.Description === jcids[i].Description
-          } else {
-            return row.Code === jcids[i].Code
-          }
-        }) + 2
-      })
-      highlightRows(failedRows, 'red');
-      SpreadsheetApp.getUi().alert(`Some rows failed to update: [${failedRows.join(", ")}]`)
-    } else {
-      SpreadsheetApp.getUi().alert(`All JCIDs updated successfully`)
-    }
+      
+      highlightRows(failures.map(each => each + 2), 'red');
+      const errorMessages = failures.map(idx => JSON.parse(responses[idx].getContentText())?.CustomMessage)
+      const failedResults = errorMessages.map((message, idx) => `Row ${failures[idx] + 2}: ${message}`) 
+      logEvent(`Some rows failed!\n${failedResults.join('\n')}`)
+    } 
+    logEvent("Script Complete!")
+    SpreadsheetApp.getUi().alert("Script Complete!")
+    setIsScriptFinished(true)
   } catch  (err) {
     Logger.log(`[UpdateJCIDS]: ${err}`)
+    setIsScriptFinished(true)
     throw err
   }
 }
 
-function buildUpdateQuery(update: IUpdateType, items: IJobCostID[]) {
-  const searchElements = items.map((each) => {
-    if(update === 'update-JCID-code') {
-      return `Description eq '${each.Description}'`
-    } else {
-      return `Code eq '${each.Code}'`
-    }
-  })
-  return `/Resource/JobCostID?$filter=EstimateREF eq ${ESTIMATE_REF} and (${searchElements.join(" or ")})`
-}
 
 function getJCIDS(baseUrl: string, query: string, token: string) {
   const url = baseUrl + query;

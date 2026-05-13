@@ -27,8 +27,11 @@ interface IGetResponse<T> {
 type TSpreadsheetValues = Number | Boolean | Date | string
 
 interface IBatchProgress {
-  batchNumber: number,
-  totalBatches: number
+  totalItems: number,
+  completedItems: number,
+  totalBatches: number,
+  completedBatches: number,
+  failedCount: number
 }
 
 function getSpreadSheetData<T>(spreadsheetName: string): T[] {
@@ -39,6 +42,7 @@ function getSpreadSheetData<T>(spreadsheetName: string): T[] {
   
   // Process data (e.g., converting to JSON format for API)
   const headers = data[0]; 
+  if(!headers) throw new Error(`No headers found in row`)
   const jsonData = [];
 
   for(let rowIndex = 1; rowIndex < data.length; rowIndex++) {
@@ -99,45 +103,139 @@ function openProgressSidebar(sidebarTitle?: string) {
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
-function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[], retryCount: number = 0, processName?: string) {
-  Utilities.sleep(retryCount * 1000);
-  if(retryCount === 0) {
-    openProgressSidebar(processName)
-  }
+// function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[], retryCount: number = 0, processName?: string) {
+//   Utilities.sleep(retryCount * 1000);
+//   if(retryCount === 0) {
+//     openProgressSidebar(processName)
+//   }
 
+//   const sliceCount = Math.ceil(batchOptions.length / DEFAULT_BATCH_SIZE)
+//   const responses: GoogleAppsScript.URL_Fetch.HTTPResponse[] = []
+//   const retries: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[] = [];
+//   const responseIndices: number[] = []; 
+
+//   for(let i = 0; i < sliceCount; i++) {
+//     setProgress(i, sliceCount, 0, retryCount)
+//     const batchResponses = UrlFetchApp.fetchAll(batchOptions.slice(i * DEFAULT_BATCH_SIZE, (i + 1) * DEFAULT_BATCH_SIZE)) // passing a value greater than the length of the array will include all values to the end of the array.
+//     batchResponses.forEach((response, index) => {
+//       const responseCode = response.getResponseCode()
+//       if(responseCode === 500) {
+//         retries.push(batchOptions[index])
+//         responseIndices.push(index);
+//       }
+//     })
+//     responses.push(...batchResponses)
+//     // if only one call is being made or on the last call, don't sleep
+//     if(sliceCount > 1 && i < sliceCount - 1) {
+//       Utilities.sleep(1000)
+//     }
+//     setProgress(i+1, sliceCount, retries.length, retryCount);
+//   }
+
+//   if(retryCount < MAX_RETRIES && retries.length > 0) {
+//     Logger.log(`${retries.length} entries failed due to connection timeout, retrying...`)
+//     const retryResponses = batchFetch(retries, retryCount + 1);
+//     retryResponses.forEach((response, index) => {
+//       responses[responseIndices[index]] = response;
+//     })
+//   }
+//   setProgress(sliceCount, sliceCount, 0, retryCount); // Sets the "isCompleted flag and closes the sidebar"
+//   return responses
+// }
+function batchFetch(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[]) {
   const sliceCount = Math.ceil(batchOptions.length / DEFAULT_BATCH_SIZE)
   const responses: GoogleAppsScript.URL_Fetch.HTTPResponse[] = []
-  const retries: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[] = [];
-  const responseIndices: number[] = []; 
+  
+  logBatchProgress({
+    failedCount: 0,
+    totalItems: batchOptions.length,
+    completedItems: 0,
+    totalBatches: sliceCount,
+    completedBatches: 0
+  })
 
+  let failedCount = 0;
   for(let i = 0; i < sliceCount; i++) {
-    setProgress(i, sliceCount, 0, retryCount)
-    const batchResponses = UrlFetchApp.fetchAll(batchOptions.slice(i * DEFAULT_BATCH_SIZE, (i + 1) * DEFAULT_BATCH_SIZE)) // passing a value greater than the length of the array will include all values to the end of the array.
-    batchResponses.forEach((response, index) => {
-      const responseCode = response.getResponseCode()
-      if(responseCode === 500) {
-        retries.push(batchOptions[index])
-        responseIndices.push(index);
+    logEvent(`Starting batch ${i + 1} of ${sliceCount}`)
+    const batchRes = _fetchAllWithRetries(batchOptions.slice(i * DEFAULT_BATCH_SIZE, (i + 1) * DEFAULT_BATCH_SIZE));
+    batchRes.forEach((res) => {
+      if(res.getResponseCode() > 299) {
+        failedCount++
       }
+      responses.push(...batchRes)
     })
-    responses.push(...batchResponses)
-    // if only one call is being made or on the last call, don't sleep
-    if(sliceCount > 1 && i < sliceCount - 1) {
-      Utilities.sleep(1000)
+    logBatchProgress({
+      failedCount,
+      completedItems: responses.length - failedCount,
+      completedBatches: i + 1
+    })
+    logEvent(`Batch ${i+1} complete`)
+  }
+  return responses;
+}
+
+function _fetchAllWithRetries(batchOptions: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[], retryCount = 0) {
+  const retries: (string | GoogleAppsScript.URL_Fetch.URLFetchRequest)[] = [];
+  const responses = UrlFetchApp.fetchAll(batchOptions);
+  const retryIdxs: number[] = []
+  responses.forEach((res, idx) => {
+    const code = res.getResponseCode()
+    if(code === 500) {
+      retries.push(batchOptions[idx]);
+      retryIdxs.push(idx)
     }
-    setProgress(i+1, sliceCount, retries.length, retryCount);
+  })
+
+  if(retryCount <= MAX_RETRIES && retries.length > 0) {
+    const batchProgress = getBatchProgress()
+    logEvent(`${retries.length} items timed out in batch ${batchProgress.completedBatches + 1}. Retrying...`)
+    const retryResponses = _fetchAllWithRetries(retries, retryCount + 1);
+    retryResponses.forEach((res, idx) => {
+      responses[retryIdxs[idx]] = res
+    })
   }
 
-  if(retryCount < MAX_RETRIES && retries.length > 0) {
-    Logger.log(`${retries.length} entries failed due to connection timeout, retrying...`)
-    const retryResponses = batchFetch(retries, retryCount + 1);
-    retryResponses.forEach((response, index) => {
-      responses[responseIndices[index]] = response;
-    })
-  }
-  setProgress(sliceCount, sliceCount, 0, retryCount); // Sets the "isCompleted flag and closes the sidebar"
-  return responses
+  return responses;
 }
+
+function logEvent(message: string) {
+  const userService = PropertiesService.getUserProperties()
+  const raw = userService.getProperty('scriptEvents')
+  const events: string[] = raw ? JSON.parse(raw) : []
+  events.push(message);
+  userService.setProperty('scriptEvents', JSON.stringify(events))
+}
+function getBatchProgress() {
+  const userService = PropertiesService.getUserProperties()
+  const raw: string | null = userService.getProperty('batchProgress');
+  const current = raw ? JSON.parse(raw) : {} as IBatchProgress; 
+  return current as IBatchProgress
+}
+function logBatchProgress(progress: Partial<IBatchProgress>) {
+  const userService = PropertiesService.getUserProperties()
+  const raw: string | null = userService.getProperty('batchProgress');
+  const current: IBatchProgress = raw ? JSON.parse(raw) : {} ;
+  userService.setProperty('batchProgress', JSON.stringify({...current, ...progress}))
+}
+
+function getScriptProgress() {
+  const userService = PropertiesService.getUserProperties()
+  const properties = userService.getProperties();
+  const batchProgress: IBatchProgress = properties.batchProgress ? JSON.parse(properties.batchProgress) : {} as IBatchProgress
+  const scriptEvents: string[] = properties.scriptEvents ? JSON.parse(properties.scriptEvents): []
+  const scriptFinished: boolean = properties.scriptFinished ? JSON.parse(properties.scriptFinished) : false;
+  return {
+    batchProgress,
+    scriptEvents,
+    scriptFinished
+  }
+}
+function clearScriptProgress() {
+  const userService = PropertiesService.getUserProperties()
+  userService.deleteProperty('batchProgress')
+  userService.deleteProperty('scriptEvents')
+}
+
 function fetchWithRetries(url: string, options: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions, retryCount: number = 0) {
   Utilities.sleep(retryCount * 1000);
 
@@ -269,6 +367,10 @@ function highlightRows(rowIndices: number[], color: string) {
       sheet.getRange(rowStart, 1, groupSize, lastColumn).setBackground(color);
     }
   })
+}
+
+function setIsScriptFinished(isFinished: boolean) {
+  PropertiesService.getUserProperties().setProperty('scriptFinished', JSON.stringify(isFinished))
 }
 
 function deepIncludes(array: any[], searchElement: any) {
