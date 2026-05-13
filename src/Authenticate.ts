@@ -156,7 +156,6 @@ function validateAuthentication() {
   const options = {
     method: 'get' as const,
     headers: createHeaders(token),
-    muteHttpExceptions: true
   }
   try {
     UrlFetchApp.fetch(`${baseUrl}/Estimate/schema`, options)
